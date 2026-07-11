@@ -21,9 +21,24 @@ def configure_logging(app: Flask) -> None:
         "%Y-%m-%d %H:%M:%S",
     )
 
-    app_handler = _rotating_handler(log_dir / "application.log", formatter)
-    error_handler = _rotating_handler(log_dir / "error.log", formatter)
-    access_handler = _rotating_handler(log_dir / "access.log", formatter)
+    app_handler = _rotating_handler(
+        log_dir / "application.log",
+        formatter,
+        app.config["LOG_MAX_BYTES"],
+        app.config["LOG_BACKUP_COUNT"],
+    )
+    error_handler = _rotating_handler(
+        log_dir / "error.log",
+        formatter,
+        app.config["LOG_MAX_BYTES"],
+        app.config["LOG_BACKUP_COUNT"],
+    )
+    access_handler = _rotating_handler(
+        log_dir / "access.log",
+        formatter,
+        app.config["LOG_MAX_BYTES"],
+        app.config["LOG_BACKUP_COUNT"],
+    )
 
     logging.getLogger().setLevel(level)
     app.logger.setLevel(level)
@@ -55,11 +70,16 @@ def configure_logging(app: Flask) -> None:
         return response
 
 
-def _rotating_handler(path: Path, formatter: logging.Formatter) -> RotatingFileHandler:
+def _rotating_handler(
+    path: Path,
+    formatter: logging.Formatter,
+    max_bytes: int,
+    backup_count: int,
+) -> RotatingFileHandler:
     handler = RotatingFileHandler(
         path,
-        maxBytes=5 * 1024 * 1024,
-        backupCount=5,
+        maxBytes=max_bytes,
+        backupCount=backup_count,
         encoding="utf-8",
     )
     handler.setFormatter(formatter)

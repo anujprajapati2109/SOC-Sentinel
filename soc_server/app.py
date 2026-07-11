@@ -1,4 +1,3 @@
-import os
 from datetime import timezone
 from urllib.parse import urlencode
 
@@ -7,7 +6,7 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy import inspect, text
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from config import config_by_name
+from config import config_by_name, resolve_config_name
 from models import db
 from api import register_api_blueprints
 from routes import register_blueprints
@@ -25,7 +24,7 @@ def create_app(config_name: str | None = None) -> Flask:
     """Create and configure the Flask application."""
 
     selected_config = config_by_name.get(
-        config_name or os.getenv("FLASK_CONFIG", "default"),
+        resolve_config_name(config_name),
         config_by_name["default"],
     )
 

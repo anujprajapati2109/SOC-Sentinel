@@ -20,4 +20,5 @@ def register_api_blueprints(app: Flask) -> None:
     app.register_blueprint(commands_api_bp, url_prefix="/api/v1/commands")
     app.register_blueprint(dashboard_api_bp, url_prefix="/api/v1/dashboard")
     app.register_blueprint(health_api_bp, url_prefix="/api/v1/health")
+    app.register_blueprint(health_api_bp, url_prefix="/health", name="health_root")
     app.register_blueprint(search_api_bp, url_prefix="/api/v1/search")
