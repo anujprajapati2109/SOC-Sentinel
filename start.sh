@@ -5,6 +5,7 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVER_DIR="${PROJECT_ROOT}/soc_server"
 VENV_DIR="${PROJECT_ROOT}/.venv"
 ENV_FILE="${PROJECT_ROOT}/.env"
+PYTHON_BIN="${PYTHON_BIN:-python3.14}"
 
 cd "${SERVER_DIR}"
 
@@ -20,11 +21,16 @@ export HOST="${HOST:-127.0.0.1}"
 export PORT="${PORT:-5000}"
 
 if [[ ! -x "${VENV_DIR}/bin/python" ]]; then
-  python3 -m venv "${VENV_DIR}"
+  echo "Virtual environment not found at ${VENV_DIR}." >&2
+  echo "Create it first with: ${PYTHON_BIN} -m venv ${VENV_DIR}" >&2
+  exit 1
 fi
 
-"${VENV_DIR}/bin/python" -m pip install --upgrade pip
-"${VENV_DIR}/bin/python" -m pip install -r requirements.txt
+if [[ ! -x "${VENV_DIR}/bin/gunicorn" ]]; then
+  echo "Gunicorn not found in ${VENV_DIR}." >&2
+  echo "Install dependencies first with: ${VENV_DIR}/bin/pip install -r ${SERVER_DIR}/requirements.txt" >&2
+  exit 1
+fi
 
 exec "${VENV_DIR}/bin/gunicorn" \
   --workers "${GUNICORN_WORKERS:-3}" \
