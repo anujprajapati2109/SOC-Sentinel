@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Reports | SOC Sentinel{% endblock %}
+{% block page_title %}Reports{% endblock %}
+
+{% block content %}
+<section class="panel mt-4">
+    <div class="panel-header">
+        <div>
+            <h2>Reporting Center</h2>
+            <p>Exportable operational summaries for SOC review and documentation.</p>
+        </div>
+        <div class="button-row">
+            <a class="btn btn-sm btn-outline-danger" href="{{ url_for('dashboard.export_report', format_name='pdf') }}"><i class="bi bi-filetype-pdf"></i> Generate PDF Report</a>
+            <a class="btn btn-sm btn-outline-info" href="{{ url_for('dashboard.export_report', format_name='csv') }}"><i class="bi bi-filetype-csv"></i> Export CSV</a>
+            <a class="btn btn-sm btn-outline-light" href="{{ url_for('dashboard.export_report', format_name='json') }}"><i class="bi bi-filetype-json"></i> Export JSON</a>
+        </div>
+    </div>
+</section>
+
+<section class="summary-grid mt-4">
+    {% for label, value in report.executive_summary.items() %}
+    <article class="metric-card compact">
+        <div class="metric-icon metric-primary"><i class="bi bi-clipboard-data"></i></div>
+        <div><p class="metric-label">{{ label }}</p><p class="metric-value">{{ value }}</p></div>
+    </article>
+    {% endfor %}
+</section>
+
+<section class="command-grid mt-4">
+    <div class="panel">
+        <div class="panel-header"><div><h2>Security Statistics</h2><p>Alert and incident severity distribution.</p></div><i class="bi bi-shield-exclamation panel-icon"></i></div>
+        <div class="health-grid">
+            {% for label, value in report.security_statistics.items() %}
+            <div class="health-item"><span>{{ label }}</span><strong>{{ value }}</strong></div>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="panel">
+        <div class="panel-header"><div><h2>MITRE Summary</h2><p>Tactic counts from detections and incidents.</p></div><i class="bi bi-shield-shaded panel-icon"></i></div>
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0">
+                <thead><tr><th>Tactic</th><th>Count</th></tr></thead>
+                <tbody>
+                    {% for row in report.mitre_summary %}
+                    <tr><td>{{ row.tactic }}</td><td>{{ row.count }}</td></tr>
+                    {% else %}
+                    <tr class="empty-row"><td colspan="2"><i class="bi bi-inbox"></i>No MITRE data</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<section class="command-grid mt-4">
+    <div class="panel">
+        <div class="panel-header"><div><h2>Top Endpoints</h2><p>Endpoint activity totals.</p></div><i class="bi bi-hdd-network panel-icon"></i></div>
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0">
+                <thead><tr><th>Hostname</th><th>Telemetry</th><th>Alerts</th><th>Incidents</th></tr></thead>
+                <tbody>
+                    {% for row in report.top_endpoints %}
+                    <tr><td>{{ row.hostname }}</td><td>{{ row.telemetry }}</td><td>{{ row.alerts }}</td><td>{{ row.incidents }}</td></tr>
+                    {% else %}
+                    <tr class="empty-row"><td colspan="4"><i class="bi bi-pc-display"></i>No endpoint activity</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="panel">
+        <div class="panel-header"><div><h2>Top Detection Rules</h2><p>Most frequently triggered detections.</p></div><i class="bi bi-bullseye panel-icon"></i></div>
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0">
+                <thead><tr><th>Rule</th><th>Trigger Count</th></tr></thead>
+                <tbody>
+                    {% for row in report.top_detection_rules %}
+                    <tr><td>{{ row.name }}</td><td>{{ row.triggered }}</td></tr>
+                    {% else %}
+                    <tr class="empty-row"><td colspan="2"><i class="bi bi-inbox"></i>No detection activity</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<section class="panel mt-4">
+    <div class="panel-header"><div><h2>Top Correlation Rules</h2><p>Correlation rules producing incidents.</p></div><i class="bi bi-diagram-3 panel-icon"></i></div>
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0">
+            <thead><tr><th>Rule</th><th>Incident Count</th></tr></thead>
+            <tbody>
+                {% for row in report.top_correlation_rules %}
+                <tr><td>{{ row.name }}</td><td>{{ row.incidents }}</td></tr>
+                {% else %}
+                <tr class="empty-row"><td colspan="2"><i class="bi bi-inbox"></i>No correlation activity</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

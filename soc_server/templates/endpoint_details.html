@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block title %}Endpoint Details | SOC Sentinel{% endblock %}
+{% block page_title %}Endpoint Details{% endblock %}
+
+{% block content %}
+{% if endpoint %}
+<section class="details-grid mt-4">
+    <div class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>{{ endpoint.endpoint_id }}</h2>
+                <p>{{ endpoint.hostname }}</p>
+            </div>
+            {% if endpoint.status == "Online" %}
+            <span class="badge rounded-pill text-bg-success">Online</span>
+            {% else %}
+            <span class="badge rounded-pill text-bg-secondary">Offline</span>
+            {% endif %}
+        </div>
+
+        <dl class="details-list">
+            <div>
+                <dt>Username</dt>
+                <dd>{{ endpoint.username or "Unknown" }}</dd>
+            </div>
+            <div>
+                <dt>Operating System</dt>
+                <dd>{{ endpoint.operating_system or "Unknown" }} {{ endpoint.os_version or "" }}</dd>
+            </div>
+            <div>
+                <dt>IP Address</dt>
+                <dd>{{ endpoint.ip_address or "Unknown" }}</dd>
+            </div>
+            <div>
+                <dt>MAC Address</dt>
+                <dd>{{ endpoint.mac_address or "Unknown" }}</dd>
+            </div>
+            <div>
+                <dt>Agent Version</dt>
+                <dd>{{ endpoint.agent_version or "Unknown" }}</dd>
+            </div>
+            <div>
+                <dt>Device Fingerprint</dt>
+                <dd class="text-break font-monospace">{{ endpoint.device_fingerprint or "Unknown" }}</dd>
+            </div>
+            <div>
+                <dt>Identity Status</dt>
+                <dd>
+                    {% if endpoint.identity_status == "Normal" %}
+                    <span class="badge rounded-pill text-bg-success">Normal</span>
+                    {% elif endpoint.identity_status == "Changed" %}
+                    <span class="badge rounded-pill text-bg-danger">Changed</span>
+                    {% else %}
+                    <span class="badge rounded-pill text-bg-secondary">Unknown</span>
+                    {% endif %}
+                </dd>
+            </div>
+            {% if endpoint.identity_status == "Changed" %}
+            <div>
+                <dt>Expected Fingerprint</dt>
+                <dd class="text-break font-monospace">{{ endpoint.identity_previous_fingerprint or "Unknown" }}</dd>
+            </div>
+            <div>
+                <dt>Observed Fingerprint</dt>
+                <dd class="text-break font-monospace">{{ endpoint.identity_observed_fingerprint or "Unknown" }}</dd>
+            </div>
+            <div>
+                <dt>Identity Last Changed</dt>
+                <dd>{{ endpoint.identity_last_changed.strftime("%Y-%m-%d %H:%M:%S") if endpoint.identity_last_changed else "Unknown" }}</dd>
+            </div>
+            {% endif %}
+            <div>
+                <dt>Registered At</dt>
+                <dd>{{ endpoint.registered_at.strftime("%Y-%m-%d %H:%M:%S") if endpoint.registered_at else "Unknown" }}</dd>
+            </div>
+            <div>
+                <dt>Last Seen</dt>
+                <dd>{{ endpoint.last_seen.strftime("%Y-%m-%d %H:%M:%S") if endpoint.last_seen else "Never" }}</dd>
+            </div>
+            <div>
+                <dt>Telemetry Count</dt>
+                <dd><a class="table-link" href="{{ url_with_query('dashboard.telemetry', endpoint=endpoint.endpoint_id) }}">{{ telemetry_count }}</a></dd>
+            </div>
+            <div>
+                <dt>Alert Count</dt>
+                <dd><a class="table-link" href="{{ url_with_query('dashboard.alerts', endpoint=endpoint.endpoint_id) }}">{{ alert_count }}</a></dd>
+            </div>
+            <div>
+                <dt>Incident Count</dt>
+                <dd><a class="table-link" href="{{ url_with_query('dashboard.incidents', endpoint=endpoint.endpoint_id) }}">{{ incident_count }}</a></dd>
+            </div>
+        </dl>
+    </div>
+</section>
+
+<nav class="section-tabs mt-4" aria-label="Endpoint sections">
+    <a href="#overview">Overview</a>
+    <a href="#telemetry">Telemetry</a>
+    <a href="#alerts">Alerts</a>
+    <a href="#incidents">Incidents</a>
+    <a href="#response">Response</a>
+</nav>
+
+<section id="overview" class="panel mt-4">
+    <div class="panel-header">
+        <div>
+            <h2>Agent Health</h2>
+            <p>Live endpoint health, telemetry freshness, and queued response state.</p>
+        </div>
+        <i class="bi bi-heart-pulse panel-icon"></i>
+    </div>
+    <dl class="details-list">
+        <div><dt>Status</dt><dd>{{ endpoint.status }}</dd></div>
+        <div><dt>Agent Version</dt><dd>{{ endpoint.agent_version or "Unknown" }}</dd></div>
+        <div><dt>Last Heartbeat</dt><dd>{{ time_ago(endpoint.last_seen) }}</dd></div>
+        <div><dt>Pending Commands</dt><dd>{{ commands | selectattr("status", "equalto", "PENDING") | list | length }}</dd></div>
+        <div>
+            <dt>Last Command</dt>
+            <dd>
+                {% if commands %}
+                {{ safe_commands.get(commands[0].command_type, commands[0].command_type) }} ({{ commands[0].status }})
+                {% else %}
+                None
+                {% endif %}
+            </dd>
+        </div>
+    </dl>
+</section>
+
+<section class="command-grid mt-4">
+    <div id="telemetry" class="panel">
+        <div class="panel-header"><div><h2>Recent Telemetry</h2><p>Latest telemetry from this endpoint.</p></div><i class="bi bi-activity panel-icon"></i></div>
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0 soc-table" data-page-size="10">
+                <thead><tr><th>Time</th><th>Collector</th><th>Event</th><th>Severity</th></tr></thead>
+                <tbody>
+                    {% for event in telemetry %}
+                    <tr class="clickable-row" data-href="{{ url_for('dashboard.telemetry', telemetry_id=event.id) }}">
+                        <td>{{ event.timestamp.strftime("%Y-%m-%d %H:%M:%S") }}</td><td>{{ event.collector }}</td><td>{{ event.event_type }}</td><td><span class="badge severity-badge severity-{{ event.severity }}">{{ event.severity }}</span></td>
+                    </tr>
+                    {% else %}
+                    <tr class="empty-row"><td colspan="4"><i class="bi bi-inbox"></i>No telemetry</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div id="alerts" class="panel">
+        <div class="panel-header"><div><h2>Recent Alerts</h2><p>Latest alerts for this endpoint.</p></div><i class="bi bi-bell panel-icon"></i></div>
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0 soc-table" data-page-size="10">
+                <thead><tr><th>Alert</th><th>Rule</th><th>Severity</th><th>Time</th></tr></thead>
+                <tbody>
+                    {% for alert in alerts %}
+                    <tr class="clickable-row" data-href="{{ url_for('dashboard.alert_details', alert_id=alert.alert_id) }}">
+                        <td><a class="table-link" href="{{ url_for('dashboard.alert_details', alert_id=alert.alert_id) }}">{{ alert.alert_id }}</a></td><td>{{ alert.rule_id }}</td><td><span class="badge severity-badge severity-{{ alert.severity }}">{{ alert.severity }}</span></td><td>{{ alert.timestamp.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+                    </tr>
+                    {% else %}
+                    <tr class="empty-row"><td colspan="4"><i class="bi bi-inbox"></i>No alerts</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<section id="incidents" class="panel mt-4">
+    <div class="panel-header"><div><h2>Recent Incidents</h2><p>Correlated incidents tied to this endpoint.</p></div><i class="bi bi-folder2-open panel-icon"></i></div>
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0 soc-table" data-page-size="10">
+            <thead><tr><th>Incident</th><th>Rule</th><th>Severity</th><th>Status</th><th>Created</th></tr></thead>
+            <tbody>
+                {% for incident in incidents %}
+                <tr class="clickable-row" data-href="{{ url_for('dashboard.incident_details', incident_id=incident.incident_id) }}">
+                    <td><a class="table-link" href="{{ url_for('dashboard.incident_details', incident_id=incident.incident_id) }}">{{ incident.incident_id }}</a></td><td>{{ incident.correlation_rule_id }}</td><td><span class="badge severity-badge severity-{{ incident.severity }}">{{ incident.severity }}</span></td><td>{{ incident.status }}</td><td>{{ incident.created_at.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+                </tr>
+                {% else %}
+                <tr class="empty-row"><td colspan="5"><i class="bi bi-inbox"></i>No incidents</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section id="response" class="panel mt-4">
+    <div class="panel-header">
+        <div>
+            <h2>Response</h2>
+            <p>Safe manual commands queued for this endpoint agent.</p>
+        </div>
+        <i class="bi bi-terminal-check panel-icon"></i>
+    </div>
+    <form class="button-row p-3" method="post" action="{{ url_for('dashboard.create_response_command') }}">
+        <input type="hidden" name="endpoint_id" value="{{ endpoint.endpoint_id }}">
+        <input type="hidden" name="requested_by" value="Analyst">
+        {% for command_type, label in safe_commands.items() %}
+        <button class="btn btn-sm btn-outline-info" type="submit" name="command_type" value="{{ command_type }}" data-confirm="Queue {{ label }} for {{ endpoint.endpoint_id }}?">
+            <i class="bi bi-send"></i> {{ label }}
+        </button>
+        {% endfor %}
+        <button class="btn btn-sm btn-outline-secondary" type="button" disabled title="Destructive or shell-based response is intentionally excluded.">
+            <i class="bi bi-shield-lock"></i> Unsafe Actions Disabled
+        </button>
+    </form>
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0 soc-table" data-page-size="10">
+            <thead><tr><th>Command</th><th>Status</th><th>Started</th><th>Completed</th><th>Result</th></tr></thead>
+            <tbody>
+                {% for command in commands %}
+                <tr>
+                    <td><a class="table-link" href="{{ url_with_query('dashboard.response_center', endpoint=endpoint.endpoint_id) }}">{{ safe_commands.get(command.command_type, command.command_type) }}</a></td>
+                    <td>{{ command.status }}</td>
+                    <td>{{ command.started_at.strftime("%Y-%m-%d %H:%M:%S") if command.started_at else "Not started" }}</td>
+                    <td>{{ command.completed_at.strftime("%Y-%m-%d %H:%M:%S") if command.completed_at else "Not completed" }}</td>
+                    <td>
+                        {% if command.error_message %}
+                        <span class="text-danger">{{ command.error_message }}</span>
+                        {% elif command.response %}
+                        <pre class="mini-json">{{ command.response | tojson(indent=2) }}</pre>
+                        {% else %}
+                        Waiting
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr class="empty-row"><td colspan="5"><i class="bi bi-inbox"></i>No response commands</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% else %}
+<section class="panel mt-4">
+    <div class="empty-state">
+        <i class="bi bi-search"></i>
+        <h2>Endpoint not found</h2>
+        <p>The requested endpoint ID does not exist.</p>
+        <a class="btn btn-outline-info" href="{{ url_for('dashboard.endpoints') }}">Back to Endpoints</a>
+    </div>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Endpoint Response | SOC Sentinel{% endblock %}
+{% block page_title %}Endpoint Response{% endblock %}
+
+{% macro command_badge(status) -%}
+    {% set styles = {
+        "PENDING": "text-bg-warning",
+        "RUNNING": "text-bg-info",
+        "COMPLETED": "text-bg-success",
+        "FAILED": "text-bg-danger",
+        "EXPIRED": "text-bg-secondary"
+    } %}
+    <span class="badge rounded-pill {{ styles.get(status, 'text-bg-secondary') }}">{{ status }}</span>
+{%- endmacro %}
+
+{% block content %}
+<section class="details-grid mt-4">
+    <div class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>Queue Safe Command</h2>
+                <p>Manual response commands are queued for agent polling. Heartbeat remains separate.</p>
+            </div>
+            <i class="bi bi-terminal-plus panel-icon"></i>
+        </div>
+        <form class="settings-grid" method="post" action="{{ url_for('dashboard.create_response_command') }}">
+            <label class="setting-field">
+                <span>Endpoint</span>
+                <select class="form-select" name="endpoint_id" required>
+                    <option value="">Select endpoint</option>
+                    {% for endpoint in endpoints %}
+                    <option value="{{ endpoint.endpoint_id }}" {% if filters.endpoint == endpoint.endpoint_id %}selected{% endif %}>
+                        {{ endpoint.endpoint_id }} - {{ endpoint.hostname }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="setting-field">
+                <span>Command</span>
+                <select class="form-select" name="command_type" required>
+                    {% for command_type, label in safe_commands.items() %}
+                    <option value="{{ command_type }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="setting-field">
+                <span>Requested By</span>
+                <input class="form-control" name="requested_by" value="Analyst" required>
+            </label>
+            <div class="setting-field">
+                <span>Blocked Actions</span>
+                <button class="btn btn-outline-secondary" type="button" disabled title="Remote shell, process kill, file delete, and isolation are intentionally excluded from v0.8.0.">
+                    <i class="bi bi-shield-lock"></i> Destructive Actions Disabled
+                </button>
+            </div>
+            <div class="button-row">
+                <button class="btn btn-info" type="submit"><i class="bi bi-send"></i> Queue Command</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>Command Filters</h2>
+                <p>Review pending, running, completed, failed, and expired commands.</p>
+            </div>
+            <i class="bi bi-funnel panel-icon"></i>
+        </div>
+        <form class="settings-grid" method="get">
+            <label class="setting-field">
+                <span>Endpoint</span>
+                <input class="form-control" name="endpoint" value="{{ filters.endpoint }}" placeholder="EP-000001">
+            </label>
+            <label class="setting-field">
+                <span>Status</span>
+                <select class="form-select" name="status">
+                    <option value="">Any status</option>
+                    {% for status in statuses %}
+                    <option value="{{ status }}" {% if filters.status == status %}selected{% endif %}>{{ status }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <div class="button-row">
+                <button class="btn btn-outline-info" type="submit"><i class="bi bi-funnel"></i> Filter</button>
+                <a class="btn btn-outline-light" href="{{ url_for('dashboard.response_center') }}">Clear</a>
+            </div>
+        </form>
+    </div>
+</section>
+
+<section class="panel mt-4">
+    <div class="panel-header">
+        <div>
+            <h2>Command History</h2>
+            <p>Endpoint response queue state and returned execution results.</p>
+        </div>
+        <i class="bi bi-clock-history panel-icon"></i>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0 soc-table" data-page-size="25">
+            <thead>
+                <tr>
+                    <th>Command ID</th>
+                    <th>Endpoint</th>
+                    <th>Command</th>
+                    <th>Status</th>
+                    <th>Requested By</th>
+                    <th>Started</th>
+                    <th>Completed</th>
+                    <th>Duration</th>
+                    <th>Result</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for command in commands %}
+                <tr>
+                    <td>{{ command.command_id }}</td>
+                    <td><a class="table-link" href="{{ url_for('dashboard.endpoint_details', endpoint_id=command.endpoint_id) }}">{{ command.endpoint_id }}</a></td>
+                    <td>{{ safe_commands.get(command.command_type, command.command_type) }}</td>
+                    <td>{{ command_badge(command.status) }}</td>
+                    <td>{{ command.requested_by }}</td>
+                    <td>{{ command.started_at.strftime("%Y-%m-%d %H:%M:%S") if command.started_at else "Not started" }}</td>
+                    <td>{{ command.completed_at.strftime("%Y-%m-%d %H:%M:%S") if command.completed_at else "Not completed" }}</td>
+                    <td>
+                        {% if command.started_at and command.completed_at %}
+                        {{ (command.completed_at - command.started_at).total_seconds()|round(2) }}s
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if command.error_message %}
+                        <span class="text-danger">{{ command.error_message }}</span>
+                        {% elif command.response %}
+                        <pre class="mini-json">{{ command.response | tojson(indent=2) }}</pre>
+                        {% else %}
+                        Waiting
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr class="empty-row"><td colspan="9"><i class="bi bi-inbox"></i>No commands queued</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

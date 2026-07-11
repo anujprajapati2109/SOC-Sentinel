@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}About | SOC Sentinel{% endblock %}
+{% block page_title %}About SOC Sentinel{% endblock %}
+
+{% block content %}
+<section class="panel mt-4 about-hero">
+    <div>
+        <span class="brand-icon"><i class="bi bi-shield-lock"></i></span>
+        <h2>{{ about.name }}</h2>
+        <p>{{ about.subtitle }}</p>
+    </div>
+    <div class="about-meta">
+        <span>Version {{ about.version }}</span>
+        <span>Developer {{ about.developer }}</span>
+    </div>
+</section>
+
+<section class="command-grid mt-4">
+    <div class="panel">
+        <div class="panel-header"><div><h2>Architecture</h2><p>Core components in the SOC Sentinel platform.</p></div><i class="bi bi-diagram-3 panel-icon"></i></div>
+        <div class="tag-list">
+            {% for item in about.architecture %}
+            <span>{{ item }}</span>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="panel">
+        <div class="panel-header"><div><h2>Technology Stack</h2><p>Libraries and technologies used by this build.</p></div><i class="bi bi-code-square panel-icon"></i></div>
+        <div class="tag-list">
+            {% for item in about.technology_stack %}
+            <span>{{ item }}</span>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<section class="panel mt-4">
+    <div class="panel-header"><div><h2>Project Statistics</h2><p>Current platform data volume.</p></div><i class="bi bi-clipboard-data panel-icon"></i></div>
+    <div class="summary-grid p-3">
+        {% for label, value in about.statistics.items() %}
+        <article class="signal-card"><span>{{ label }}</span><strong>{{ value }}</strong></article>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block title %}SOC Intelligence Center | SOC Sentinel{% endblock %}
+{% block page_title %}SOC Intelligence Center{% endblock %}
+
+{% block content %}
+<section class="command-section mt-4">
+    <div class="section-heading">
+        <div>
+            <h2>Cloud Status</h2>
+            <p>Deployment mode, public endpoint, database backend, and platform health.</p>
+        </div>
+        <span class="badge rounded-pill text-bg-info">v{{ app_version }}</span>
+    </div>
+    <div id="cloud-status-grid" class="health-grid">
+        <div class="health-item"><span>Application Mode</span><strong>{{ application_mode }}</strong></div>
+        <div class="health-item"><span>Public URL</span><strong>{{ public_url }}</strong></div>
+        <div class="health-item"><span>Health Status</span><strong>Waiting</strong></div>
+    </div>
+</section>
+
+<section class="command-section mt-4">
+    <div class="section-heading">
+        <div>
+            <h2>Executive Summary</h2>
+            <p>Current operational posture across endpoints, telemetry, alerts, and correlated incidents.</p>
+        </div>
+        <span class="refresh-indicator">
+            <i class="bi bi-arrow-repeat"></i>
+            <span id="dashboard-updated">Waiting for data</span>
+        </span>
+    </div>
+    <div class="summary-grid">
+        <a class="metric-card compact clickable-card" href="{{ url_for('dashboard.endpoints', status='online') }}">
+            <div class="metric-icon metric-success"><i class="bi bi-wifi"></i></div>
+            <div><p class="metric-label">Endpoints Online</p><p class="metric-value" data-dashboard-value="endpoints.online">0</p></div>
+        </a>
+        <a class="metric-card compact clickable-card" href="{{ url_for('dashboard.endpoints', status='offline') }}">
+            <div class="metric-icon metric-warning"><i class="bi bi-wifi-off"></i></div>
+            <div><p class="metric-label">Endpoints Offline</p><p class="metric-value" data-dashboard-value="endpoints.offline">0</p></div>
+        </a>
+        <a class="metric-card compact clickable-card" href="{{ url_for('dashboard.telemetry', date='today') }}">
+            <div class="metric-icon metric-info"><i class="bi bi-activity"></i></div>
+            <div><p class="metric-label">Telemetry Today</p><p class="metric-value" data-dashboard-value="telemetry.today">0</p></div>
+        </a>
+        <a class="metric-card compact clickable-card" href="{{ url_for('dashboard.alerts', date='today') }}">
+            <div class="metric-icon metric-danger"><i class="bi bi-bell"></i></div>
+            <div><p class="metric-label">Alerts Today</p><p class="metric-value" data-dashboard-value="alerts.today">0</p></div>
+        </a>
+        <a class="metric-card compact clickable-card" href="{{ url_for('dashboard.incidents', date='today') }}">
+            <div class="metric-icon metric-primary"><i class="bi bi-folder2-open"></i></div>
+            <div><p class="metric-label">Incidents Today</p><p class="metric-value" data-dashboard-value="incidents.today">0</p></div>
+        </a>
+        <a class="metric-card compact clickable-card" href="{{ url_for('dashboard.alerts', severity='critical') }}">
+            <div class="metric-icon metric-danger"><i class="bi bi-exclamation-octagon"></i></div>
+            <div><p class="metric-label">Critical Alerts</p><p class="metric-value" data-dashboard-value="alerts.critical">0</p></div>
+        </a>
+        <a class="metric-card compact clickable-card" href="{{ url_for('dashboard.incidents', status='OPEN') }}">
+            <div class="metric-icon metric-danger"><i class="bi bi-folder-x"></i></div>
+            <div><p class="metric-label">Open Incidents</p><p class="metric-value" data-dashboard-value="incidents.open">0</p></div>
+        </a>
+        <a class="metric-card compact clickable-card" href="{{ url_for('dashboard.incidents', status='ASSIGNED') }}">
+            <div class="metric-icon metric-info"><i class="bi bi-person-check"></i></div>
+            <div><p class="metric-label">Assigned Incidents</p><p class="metric-value" data-dashboard-value="incidents.assigned">0</p></div>
+        </a>
+        <a class="metric-card compact clickable-card" href="{{ url_for('dashboard.incidents', status='INVESTIGATING') }}">
+            <div class="metric-icon metric-warning"><i class="bi bi-search"></i></div>
+            <div><p class="metric-label">Investigating</p><p class="metric-value" data-dashboard-value="incidents.investigating">0</p></div>
+        </a>
+        <a class="metric-card compact clickable-card" href="{{ url_for('dashboard.incidents', status='RESOLVED', date='today') }}">
+            <div class="metric-icon metric-success"><i class="bi bi-check2-circle"></i></div>
+            <div><p class="metric-label">Resolved Today</p><p class="metric-value" data-dashboard-value="incidents.resolved_today">0</p></div>
+        </a>
+        <a class="metric-card compact clickable-card" href="{{ url_for('dashboard.incidents', status='FALSE_POSITIVE') }}">
+            <div class="metric-icon metric-primary"><i class="bi bi-x-octagon"></i></div>
+            <div><p class="metric-label">False Positives</p><p class="metric-value" data-dashboard-value="incidents.false_positives">0</p></div>
+        </a>
+    </div>
+</section>
+
+<section class="command-section">
+    <div class="section-heading">
+        <div>
+            <h2>Live Activity</h2>
+            <p>Rolling activity rates calculated from recent platform events.</p>
+        </div>
+    </div>
+    <div class="activity-grid">
+        <a class="signal-card clickable-card" href="{{ url_for('dashboard.telemetry') }}"><span>Telemetry/sec</span><strong data-dashboard-value="telemetry.per_second">0</strong></a>
+        <a class="signal-card clickable-card" href="{{ url_for('dashboard.alerts') }}"><span>Alerts/sec</span><strong data-dashboard-value="alerts.per_second">0</strong></a>
+        <a class="signal-card clickable-card" href="{{ url_for('dashboard.incidents') }}"><span>Incidents/sec</span><strong data-dashboard-value="incidents.per_second">0</strong></a>
+        <article class="signal-card"><span>Queue Size</span><strong data-dashboard-value="telemetry.queue_size">0</strong></article>
+    </div>
+</section>
+
+<section class="command-grid">
+    <div class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>Endpoint Health</h2>
+                <p>Registered endpoint state and telemetry activity.</p>
+            </div>
+            <i class="bi bi-pc-display-horizontal panel-icon"></i>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Hostname</th>
+                        <th>Status</th>
+                        <th>CPU</th>
+                        <th>RAM</th>
+                        <th>Telemetry Count</th>
+                        <th>Last Heartbeat</th>
+                    </tr>
+                </thead>
+                <tbody id="endpoint-health-body">
+                    <tr class="empty-row"><td colspan="6"><i class="bi bi-pc-display"></i>No endpoint data</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>MITRE ATT&CK</h2>
+                <p>Tactic distribution from alerts and correlated incidents.</p>
+            </div>
+            <i class="bi bi-shield-shaded panel-icon"></i>
+        </div>
+        <div id="mitre-list" class="mitre-list"></div>
+    </div>
+</section>
+
+<section class="panel mt-4">
+    <div class="panel-header">
+        <div>
+            <h2>Attack Timeline</h2>
+            <p>Telemetry, alerts, and incidents over time.</p>
+        </div>
+        <div class="btn-group btn-group-sm" role="group" aria-label="Timeline range">
+            <button class="btn btn-outline-info active" data-timeline-range="last_hour">Last Hour</button>
+            <button class="btn btn-outline-info" data-timeline-range="24_hours">24 Hours</button>
+            <button class="btn btn-outline-info" data-timeline-range="7_days">7 Days</button>
+        </div>
+    </div>
+    <div class="chart-shell">
+        <canvas id="attackTimelineChart" height="110"></canvas>
+    </div>
+</section>
+
+<section class="command-grid mt-4">
+    <div class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>Top Detection Rules</h2>
+                <p>Detection rule trigger volume and runtime placeholders.</p>
+            </div>
+            <i class="bi bi-bullseye panel-icon"></i>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0">
+                <thead><tr><th>Rule</th><th>Triggered</th><th>Suppressed</th><th>Avg Eval</th></tr></thead>
+                <tbody id="detection-rules-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>Top Correlation Rules</h2>
+                <p>Incident production by correlation rule.</p>
+            </div>
+            <i class="bi bi-diagram-3 panel-icon"></i>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0">
+                <thead><tr><th>Rule</th><th>Incidents</th><th>Avg Correlation</th></tr></thead>
+                <tbody id="correlation-rules-body"></tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<section class="command-grid mt-4">
+    <div class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>Top Endpoints</h2>
+                <p>Endpoints ranked by telemetry activity.</p>
+            </div>
+            <i class="bi bi-hdd-network panel-icon"></i>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0">
+                <thead><tr><th>Hostname</th><th>Telemetry</th><th>Alerts</th><th>Incidents</th></tr></thead>
+                <tbody id="top-endpoints-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>System Health</h2>
+                <p>Platform service and host runtime indicators.</p>
+            </div>
+            <i class="bi bi-heart-pulse panel-icon"></i>
+        </div>
+        <div id="system-health-grid" class="health-grid"></div>
+    </div>
+</section>
+{% endblock %}

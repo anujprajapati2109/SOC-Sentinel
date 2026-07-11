@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}{{ code }} | SOC Sentinel{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<section class="panel mt-4">
+    <div class="empty-state">
+        <i class="bi bi-exclamation-triangle"></i>
+        <h2>{{ code }} - {{ title }}</h2>
+        <p>{{ message or "SOC Sentinel could not complete the requested action." }}</p>
+        <a class="btn btn-outline-info" href="{{ url_for('dashboard.index') }}">Return to Dashboard</a>
+    </div>
+</section>
+{% endblock %}

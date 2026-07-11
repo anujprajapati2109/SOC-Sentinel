@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Alert Details | SOC Sentinel{% endblock %}
+{% block page_title %}Alert Details{% endblock %}
+
+{% block content %}
+{% if alert %}
+<section class="details-grid mt-4">
+    <div class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>{{ alert.alert_id }}</h2>
+                <p>{{ alert.title }}</p>
+            </div>
+            <span class="badge severity-badge severity-{{ alert.severity }}">
+                {{ alert.severity }}
+            </span>
+        </div>
+
+        <dl class="details-list">
+            <div>
+                <dt>Rule</dt>
+                <dd>{{ rule.name if rule else alert.rule_id }}</dd>
+            </div>
+            <div>
+                <dt>Endpoint</dt>
+                <dd>{{ alert.endpoint_id }}</dd>
+            </div>
+            <div>
+                <dt>Description</dt>
+                <dd>{{ alert.description }}</dd>
+            </div>
+            <div>
+                <dt>Severity</dt>
+                <dd>{{ alert.severity }}</dd>
+            </div>
+            <div>
+                <dt>MITRE ATT&CK</dt>
+                <dd>
+                    {% if rule %}
+                    {{ rule.mitre_tactic or "Unmapped" }} / {{ rule.mitre_technique or "Unmapped" }}
+                    {% else %}
+                    Unmapped
+                    {% endif %}
+                </dd>
+            </div>
+            <div>
+                <dt>Timestamp</dt>
+                <dd>{{ alert.timestamp.strftime("%Y-%m-%d %H:%M:%S") if alert.timestamp else "Unknown" }}</dd>
+            </div>
+        </dl>
+        <div class="button-row p-3 pt-0">
+            <a class="btn btn-sm btn-info" href="{{ url_for('dashboard.endpoint_details', endpoint_id=alert.endpoint_id) }}"><i class="bi bi-pc-display"></i> Open Endpoint</a>
+            <a class="btn btn-sm btn-outline-info" href="{{ url_with_query('dashboard.telemetry', endpoint=alert.endpoint_id) }}"><i class="bi bi-activity"></i> Open Telemetry</a>
+            {% if related_incident %}
+            <a class="btn btn-sm btn-outline-danger" href="{{ url_for('dashboard.incident_details', incident_id=related_incident.incident_id) }}"><i class="bi bi-folder2-open"></i> Open Incident</a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<section class="panel mt-4">
+    <div class="panel-header">
+        <div>
+            <h2>Raw Telemetry</h2>
+            <p>Telemetry near the alert trigger time.</p>
+        </div>
+        <i class="bi bi-braces panel-icon"></i>
+    </div>
+
+    <div class="raw-telemetry-list">
+        {% for event in telemetry %}
+        <a class="table-link" href="{{ url_for('dashboard.telemetry', telemetry_id=event.id) }}">Telemetry #{{ event.id }}</a>
+        <pre>{{ event.raw_data | tojson(indent=2) }}</pre>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-inbox"></i>
+            <h2>No related telemetry</h2>
+            <p>No telemetry was found near this alert timestamp.</p>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% else %}
+<section class="panel mt-4">
+    <div class="empty-state">
+        <i class="bi bi-search"></i>
+        <h2>Alert not found</h2>
+        <p>The requested alert ID does not exist.</p>
+        <a class="btn btn-outline-info" href="{{ url_for('dashboard.alerts') }}">Back to Alerts</a>
+    </div>
+</section>
+{% endif %}
+{% endblock %}

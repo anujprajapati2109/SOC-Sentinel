@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Settings | SOC Sentinel{% endblock %}
+{% block page_title %}Settings{% endblock %}
+
+{% block content %}
+<form method="post" action="{{ url_for('dashboard.save_settings') }}">
+    <section class="panel mt-4">
+        <div class="panel-header">
+            <div>
+                <h2>Administration</h2>
+                <p>Editable platform settings persisted in the SOC Sentinel database.</p>
+            </div>
+            <div class="button-row">
+                <button class="btn btn-sm btn-info" type="submit" name="action" value="save">
+                    <i class="bi bi-save"></i> Save
+                </button>
+                <button class="btn btn-sm btn-outline-warning" type="submit" name="action" value="reset">
+                    <i class="bi bi-arrow-counterclockwise"></i> Reset
+                </button>
+                <a class="btn btn-sm btn-outline-light" href="{{ url_for('dashboard.settings') }}">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </a>
+            </div>
+        </div>
+    </section>
+
+    {% for category, rows in settings.items() %}
+    <section class="panel mt-4">
+        <div class="panel-header">
+            <div>
+                <h2>{{ category }}</h2>
+                <p>Validated configuration values for {{ category|lower }}.</p>
+            </div>
+            <i class="bi bi-sliders panel-icon"></i>
+        </div>
+        <div class="settings-grid">
+            {% for setting in rows %}
+            <label class="setting-field">
+                <span>{{ setting.label }}</span>
+                {% if setting.value_type.startswith("choice:") %}
+                <select class="form-select form-select-sm" name="{{ setting.key }}">
+                    {% for choice in setting.value_type.split(":", 1)[1].split(",") %}
+                    <option value="{{ choice }}" {% if setting.value == choice %}selected{% endif %}>{{ choice }}</option>
+                    {% endfor %}
+                </select>
+                {% elif setting.value_type == "int" %}
+                <input class="form-control form-control-sm" type="number" min="1" name="{{ setting.key }}" value="{{ setting.value }}" required>
+                {% else %}
+                <input class="form-control form-control-sm" type="text" name="{{ setting.key }}" value="{{ setting.value }}" required>
+                {% endif %}
+                <small>{{ setting.description }}</small>
+            </label>
+            {% endfor %}
+        </div>
+    </section>
+    {% endfor %}
+</form>
+
+<section class="panel mt-4">
+    <div class="panel-header">
+        <div>
+            <h2>System Information</h2>
+            <p>Read-only runtime details from the current server process.</p>
+        </div>
+        <i class="bi bi-info-circle panel-icon"></i>
+    </div>
+    <dl class="details-list">
+        {% for label, value in system.items() %}
+        <div>
+            <dt>{{ label }}</dt>
+            <dd>{{ value }}</dd>
+        </div>
+        {% endfor %}
+    </dl>
+</section>
+{% endblock %}

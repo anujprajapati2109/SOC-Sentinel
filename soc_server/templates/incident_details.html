@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block title %}Incident Details | SOC Sentinel{% endblock %}
+{% block page_title %}Incident Investigation{% endblock %}
+
+{% macro status_badge(status) -%}
+    {% set styles = {
+        "OPEN": "text-bg-danger",
+        "ASSIGNED": "text-bg-info",
+        "INVESTIGATING": "text-bg-warning",
+        "CONTAINED": "text-bg-primary",
+        "RESOLVED": "text-bg-success",
+        "CLOSED": "text-bg-secondary",
+        "FALSE_POSITIVE": "text-bg-dark"
+    } %}
+    <span class="badge rounded-pill {{ styles.get(status, 'text-bg-secondary') }}">{{ status }}</span>
+{%- endmacro %}
+
+{% macro priority_badge(priority) -%}
+    {% set styles = {
+        "Low": "text-bg-secondary",
+        "Medium": "text-bg-info",
+        "High": "text-bg-warning",
+        "Critical": "text-bg-danger"
+    } %}
+    <span class="badge rounded-pill {{ styles.get(priority, 'text-bg-secondary') }}">{{ priority or "Medium" }}</span>
+{%- endmacro %}
+
+{% block content %}
+{% if incident %}
+<section class="details-grid mt-4">
+    <div class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>{{ incident.incident_id }}</h2>
+                <p>{{ incident.title }}</p>
+            </div>
+            <span class="badge severity-badge severity-{{ incident.severity }}">{{ incident.severity }}</span>
+        </div>
+
+        <dl class="details-list">
+            <div><dt>Summary</dt><dd>{{ incident.summary }}</dd></div>
+            <div><dt>Status</dt><dd>{{ status_badge(incident.status) }}</dd></div>
+            <div><dt>Priority</dt><dd>{{ priority_badge(incident.priority) }}</dd></div>
+            <div><dt>Assigned To</dt><dd>{{ incident.assigned_to or "Unassigned" }}</dd></div>
+            <div><dt>Affected Endpoint</dt><dd><a class="table-link" href="{{ url_for('dashboard.endpoint_details', endpoint_id=incident.endpoint_id) }}">{{ incident.endpoint_id }}</a></dd></div>
+            <div><dt>Correlation Rule</dt><dd>{{ rule.name if rule else incident.correlation_rule_id }}</dd></div>
+            <div><dt>Confidence</dt><dd>{{ incident.confidence }}%</dd></div>
+            <div><dt>Risk Score</dt><dd>{{ incident.risk_score }}</dd></div>
+            <div>
+                <dt>MITRE ATT&CK</dt>
+                <dd>{{ incident.mitre_tactic or (rule.mitre_tactic if rule else "Unmapped") or "Unmapped" }} / {{ incident.mitre_technique or (rule.mitre_technique if rule else "Unmapped") or "Unmapped" }}</dd>
+            </div>
+            <div><dt>Created</dt><dd>{{ incident.created_at.strftime("%Y-%m-%d %H:%M:%S") if incident.created_at else "Unknown" }}</dd></div>
+            <div><dt>Resolved</dt><dd>{{ incident.resolved_at.strftime("%Y-%m-%d %H:%M:%S") if incident.resolved_at else "Not resolved" }}</dd></div>
+            <div><dt>Closed</dt><dd>{{ incident.closed_at.strftime("%Y-%m-%d %H:%M:%S") if incident.closed_at else "Not closed" }}</dd></div>
+        </dl>
+
+        <div class="button-row p-3 pt-0">
+            <a class="btn btn-sm btn-info" href="{{ url_for('dashboard.endpoint_details', endpoint_id=incident.endpoint_id) }}"><i class="bi bi-pc-display"></i> Open Endpoint</a>
+            <a class="btn btn-sm btn-outline-info" href="{{ url_with_query('dashboard.alerts', endpoint=incident.endpoint_id) }}"><i class="bi bi-bell"></i> Open Alerts</a>
+            <a class="btn btn-sm btn-outline-light" href="{{ url_with_query('dashboard.telemetry', endpoint=incident.endpoint_id) }}"><i class="bi bi-activity"></i> Open Telemetry</a>
+            <button class="btn btn-sm btn-outline-secondary" type="button" disabled title="Remote endpoint actions are intentionally not implemented in v0.7.0."><i class="bi bi-shield-lock"></i> Contain Endpoint</button>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>Response Actions</h2>
+                <p>Manual analyst workflow controls.</p>
+            </div>
+            <i class="bi bi-tools panel-icon"></i>
+        </div>
+
+        <div class="action-stack p-3">
+            <form class="row g-2 align-items-end" method="post" action="{{ url_for('dashboard.update_incident_action', incident_id=incident.incident_id) }}">
+                <input type="hidden" name="action" value="assign">
+                <div class="col-12 col-xl-5">
+                    <label class="form-label">Assign To</label>
+                    <input class="form-control form-control-sm" name="assigned_to" value="{{ incident.assigned_to or '' }}" placeholder="Analyst name" required>
+                </div>
+                <div class="col-12 col-xl-4">
+                    <label class="form-label">Actor</label>
+                    <input class="form-control form-control-sm" name="actor" value="Analyst" required>
+                </div>
+                <div class="col-12 col-xl-3">
+                    <button class="btn btn-sm btn-info w-100" type="submit"><i class="bi bi-person-check"></i> Assign</button>
+                </div>
+            </form>
+
+            <form class="row g-2 align-items-end" method="post" action="{{ url_for('dashboard.update_incident_action', incident_id=incident.incident_id) }}">
+                <input type="hidden" name="action" value="status">
+                <div class="col-12 col-xl-5">
+                    <label class="form-label">Status</label>
+                    <select class="form-select form-select-sm" name="status">
+                        {% for status in statuses %}
+                        <option value="{{ status }}" {% if incident.status == status %}selected{% endif %}>{{ status }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-xl-4">
+                    <label class="form-label">Actor</label>
+                    <input class="form-control form-control-sm" name="actor" value="Analyst" required>
+                </div>
+                <div class="col-12 col-xl-3">
+                    <button class="btn btn-sm btn-outline-info w-100" type="submit"><i class="bi bi-arrow-repeat"></i> Change Status</button>
+                </div>
+            </form>
+
+            <form class="row g-2 align-items-end" method="post" action="{{ url_for('dashboard.update_incident_action', incident_id=incident.incident_id) }}">
+                <input type="hidden" name="action" value="priority">
+                <div class="col-12 col-xl-5">
+                    <label class="form-label">Priority</label>
+                    <select class="form-select form-select-sm" name="priority">
+                        {% for priority in priorities %}
+                        <option value="{{ priority }}" {% if (incident.priority or "Medium") == priority %}selected{% endif %}>{{ priority }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-xl-4">
+                    <label class="form-label">Actor</label>
+                    <input class="form-control form-control-sm" name="actor" value="Analyst" required>
+                </div>
+                <div class="col-12 col-xl-3">
+                    <button class="btn btn-sm btn-outline-warning w-100" type="submit"><i class="bi bi-flag"></i> Change Priority</button>
+                </div>
+            </form>
+
+            <div class="quick-actions">
+                {% for action, label, icon, style in [
+                    ("false_positive", "Mark False Positive", "bi-x-octagon", "btn-outline-secondary"),
+                    ("resolve", "Resolve", "bi-check2-circle", "btn-outline-success"),
+                    ("close", "Close", "bi-lock", "btn-outline-danger"),
+                    ("reopen", "Reopen", "bi-unlock", "btn-outline-info")
+                ] %}
+                <form method="post" action="{{ url_for('dashboard.update_incident_action', incident_id=incident.incident_id) }}">
+                    <input type="hidden" name="action" value="{{ action }}">
+                    <input type="hidden" name="actor" value="Analyst">
+                    <button class="btn btn-sm {{ style }}" type="submit" data-confirm="Apply action: {{ label }}?"><i class="bi {{ icon }}"></i> {{ label }}</button>
+                </form>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="panel mt-4">
+    <div class="panel-header">
+        <div>
+            <h2>Investigation Notes</h2>
+            <p>Chronological analyst notes for this incident.</p>
+        </div>
+        <i class="bi bi-journal-text panel-icon"></i>
+    </div>
+    <div class="notes-layout p-3">
+        <form method="post" action="{{ url_for('dashboard.create_incident_note', incident_id=incident.incident_id) }}">
+            <div class="row g-2">
+                <div class="col-12 col-lg-3">
+                    <label class="form-label">Author</label>
+                    <input class="form-control form-control-sm" name="author" value="Analyst" required>
+                </div>
+                <div class="col-12 col-lg-9">
+                    <label class="form-label">Note</label>
+                    <textarea class="form-control" name="note" rows="3" placeholder="Document investigation findings, decisions, or next steps." required></textarea>
+                </div>
+            </div>
+            <div class="button-row mt-2">
+                <button class="btn btn-sm btn-info" type="submit"><i class="bi bi-plus-circle"></i> Add Note</button>
+            </div>
+        </form>
+
+        <div class="note-list">
+            {% for note in notes %}
+            <article class="note-item">
+                <div class="note-meta">
+                    <strong>{{ note.author }}</strong>
+                    <span>{{ note.created_at.strftime("%Y-%m-%d %H:%M:%S") if note.created_at else "Unknown" }}</span>
+                </div>
+                <form method="post" action="{{ url_for('dashboard.update_incident_note', incident_id=incident.incident_id, note_id=note.id) }}">
+                    <input type="hidden" name="author" value="{{ note.author }}">
+                    <textarea class="form-control form-control-sm" name="note" rows="3" required>{{ note.note }}</textarea>
+                    <div class="button-row mt-2">
+                        <button class="btn btn-sm btn-outline-info" type="submit"><i class="bi bi-pencil"></i> Save Edit</button>
+                    </div>
+                </form>
+                <form method="post" action="{{ url_for('dashboard.remove_incident_note', incident_id=incident.incident_id, note_id=note.id) }}">
+                    <input type="hidden" name="actor" value="Analyst">
+                    <button class="btn btn-sm btn-outline-danger mt-2" type="submit" data-confirm="Delete this note?"><i class="bi bi-trash"></i> Delete</button>
+                </form>
+            </article>
+            {% else %}
+            <div class="empty-state compact"><i class="bi bi-journal"></i><p>No investigation notes yet</p></div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<section class="panel mt-4">
+    <div class="panel-header">
+        <div>
+            <h2>Investigation History</h2>
+            <p>Status, assignment, priority, note, and closure audit trail.</p>
+        </div>
+        <i class="bi bi-clock-history panel-icon"></i>
+    </div>
+    <div class="history-timeline p-3">
+        {% for item in history %}
+        <div class="history-item">
+            <span class="history-dot"></span>
+            <div>
+                <strong>{{ item.action }}</strong>
+                <p>{{ item.actor }} · {{ item.timestamp.strftime("%Y-%m-%d %H:%M:%S") if item.timestamp else "Unknown" }}</p>
+                {% if item.previous_status or item.new_status %}
+                <small>{{ item.previous_status or "None" }} → {{ item.new_status or "None" }}</small>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-state compact"><i class="bi bi-clock"></i><p>No workflow history yet</p></div>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="panel mt-4">
+    <div class="panel-header">
+        <div>
+            <h2>Correlation Timeline</h2>
+            <p>Matched alert sequence used by the correlation rule.</p>
+        </div>
+        <i class="bi bi-diagram-3 panel-icon"></i>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0">
+            <thead><tr><th>Time</th><th>Alert</th><th>Rule</th><th>Severity</th></tr></thead>
+            <tbody>
+                {% for item in incident.timeline or [] %}
+                <tr>
+                    <td>{{ item.timestamp }}</td>
+                    <td><a class="table-link" href="{{ url_for('dashboard.alert_details', alert_id=item.alert_id) }}">{{ item.alert_id }}</a> - {{ item.title }}</td>
+                    <td>{{ item.rule_id }}</td>
+                    <td><span class="badge severity-badge severity-{{ item.severity }}">{{ item.severity }}</span></td>
+                </tr>
+                {% else %}
+                <tr class="empty-row"><td colspan="4"><i class="bi bi-inbox"></i>No timeline available</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="panel mt-4">
+    <div class="panel-header"><div><h2>Matched Alerts</h2><p>Alerts consumed by this correlation result.</p></div><i class="bi bi-bell panel-icon"></i></div>
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0">
+            <thead><tr><th>Alert ID</th><th>Rule</th><th>Severity</th><th>Time</th></tr></thead>
+            <tbody>
+                {% for alert in matched_alerts %}
+                <tr>
+                    <td><a class="table-link" href="{{ url_for('dashboard.alert_details', alert_id=alert.alert_id) }}">{{ alert.alert_id }}</a></td>
+                    <td>{{ alert.rule_id }}</td>
+                    <td><span class="badge severity-badge severity-{{ alert.severity }}">{{ alert.severity }}</span></td>
+                    <td>{{ alert.timestamp.strftime("%Y-%m-%d %H:%M:%S") if alert.timestamp else "Unknown" }}</td>
+                </tr>
+                {% else %}
+                <tr class="empty-row"><td colspan="4"><i class="bi bi-inbox"></i>No matched alerts available</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="panel mt-4">
+    <div class="panel-header"><div><h2>Related Telemetry</h2><p>Telemetry near matched alerts.</p></div><i class="bi bi-activity panel-icon"></i></div>
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0 soc-table" data-page-size="10">
+            <thead><tr><th>Telemetry</th><th>Collector</th><th>Event</th><th>Severity</th><th>Time</th></tr></thead>
+            <tbody>
+                {% for event in related_telemetry %}
+                <tr class="clickable-row" data-href="{{ url_for('dashboard.telemetry', telemetry_id=event.id) }}">
+                    <td><a class="table-link" href="{{ url_for('dashboard.telemetry', telemetry_id=event.id) }}">#{{ event.id }}</a></td>
+                    <td>{{ event.collector }}</td>
+                    <td>{{ event.event_type }}</td>
+                    <td><span class="badge severity-badge severity-{{ event.severity }}">{{ event.severity }}</span></td>
+                    <td>{{ event.timestamp.strftime("%Y-%m-%d %H:%M:%S") if event.timestamp else "Unknown" }}</td>
+                </tr>
+                {% else %}
+                <tr class="empty-row"><td colspan="5"><i class="bi bi-inbox"></i>No related telemetry</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="panel mt-4">
+    <div class="panel-header"><div><h2>Evidence</h2><p>Structured evidence stored with the incident.</p></div><i class="bi bi-braces panel-icon"></i></div>
+    <div class="raw-telemetry-list"><pre>{{ incident.evidence | tojson(indent=2) }}</pre></div>
+</section>
+{% else %}
+<section class="panel mt-4">
+    <div class="empty-state">
+        <i class="bi bi-search"></i>
+        <h2>Incident not found</h2>
+        <p>The requested correlated incident ID does not exist.</p>
+        <a class="btn btn-outline-info" href="{{ url_for('dashboard.incidents') }}">Back to Incidents</a>
+    </div>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Telemetry | SOC Sentinel{% endblock %}
+{% block page_title %}Telemetry{% endblock %}
+
+{% block content %}
+<section id="live-table-section" class="panel mt-4">
+    <div class="panel-header">
+        <div>
+            <h2>Live Telemetry</h2>
+            <p>Filter, inspect, and pivot from endpoint telemetry.</p>
+        </div>
+        <i class="bi bi-activity panel-icon"></i>
+    </div>
+
+    <form class="filter-bar" method="get">
+        <input class="form-control form-control-sm" name="endpoint" placeholder="Endpoint" value="{{ filters.endpoint }}">
+        <input class="form-control form-control-sm" name="collector" placeholder="Collector" value="{{ filters.collector }}">
+        <select class="form-select form-select-sm" name="severity">
+            <option value="">Severity</option>
+            {% for severity in ["info", "low", "medium", "high", "critical"] %}
+            <option value="{{ severity }}" {% if filters.severity == severity %}selected{% endif %}>{{ severity|title }}</option>
+            {% endfor %}
+        </select>
+        <input class="form-control form-control-sm" name="event_type" placeholder="Event Type" value="{{ filters.event_type }}">
+        <input class="form-control form-control-sm" name="search" placeholder="Search text" value="{{ filters.search }}">
+        <select class="form-select form-select-sm" name="date">
+            <option value="">Any date</option>
+            <option value="today" {% if filters.date == "today" %}selected{% endif %}>Today</option>
+        </select>
+        <button class="btn btn-sm btn-info" type="submit"><i class="bi bi-funnel"></i> Filter</button>
+        <a class="btn btn-sm btn-outline-light" href="{{ url_for('dashboard.telemetry') }}">Clear</a>
+    </form>
+
+    <div class="table-toolbar" data-table-toolbar></div>
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0 soc-table" data-page-size="25">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Endpoint</th>
+                    <th>Collector</th>
+                    <th>Event Type</th>
+                    <th>Severity</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in events %}
+                <tr class="clickable-row telemetry-row"
+                    data-telemetry-id="{{ event.id }}"
+                    data-endpoint="{{ event.endpoint_id }}"
+                    data-collector="{{ event.collector }}"
+                    data-severity="{{ event.severity }}"
+                    data-event-type="{{ event.event_type }}"
+                    data-timestamp="{{ event.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}"
+                    data-json='{{ event.raw_data | tojson | forceescape }}'
+                    data-endpoint-url="{{ url_for('dashboard.endpoint_details', endpoint_id=event.endpoint_id) }}">
+                    <td>{{ event.timestamp.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+                    <td><a class="table-link" href="{{ url_for('dashboard.endpoint_details', endpoint_id=event.endpoint_id) }}">{{ event.endpoint_id }}</a></td>
+                    <td>{{ event.collector }}</td>
+                    <td>{{ event.event_type }}</td>
+                    <td><a class="badge severity-badge severity-{{ event.severity }} text-decoration-none" href="{{ url_for('dashboard.telemetry', severity=event.severity) }}">{{ event.severity }}</a></td>
+                </tr>
+                {% else %}
+                <tr class="empty-row"><td colspan="5"><i class="bi bi-inbox"></i>No telemetry received</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<div class="offcanvas offcanvas-end text-bg-dark" tabindex="-1" id="telemetryOffcanvas" aria-labelledby="telemetryOffcanvasLabel">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="telemetryOffcanvasLabel">Telemetry Details</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+        <dl class="details-list compact-details">
+            <div><dt>Telemetry ID</dt><dd id="telemetryDetailId"></dd></div>
+            <div><dt>Endpoint</dt><dd id="telemetryDetailEndpoint"></dd></div>
+            <div><dt>Collector</dt><dd id="telemetryDetailCollector"></dd></div>
+            <div><dt>Severity</dt><dd id="telemetryDetailSeverity"></dd></div>
+            <div><dt>Event Type</dt><dd id="telemetryDetailEventType"></dd></div>
+            <div><dt>Timestamp</dt><dd id="telemetryDetailTimestamp"></dd></div>
+            <div><dt>Detection Rule</dt><dd>Evaluated by detection engine when applicable</dd></div>
+            <div><dt>Related Alert</dt><dd>Open endpoint or alert list to pivot</dd></div>
+            <div><dt>Related Incident</dt><dd>Available through correlated alert details</dd></div>
+            <div><dt>MITRE Mapping</dt><dd>Derived from related alert rule</dd></div>
+        </dl>
+        <div class="button-row mb-3">
+            <button class="btn btn-sm btn-outline-info" type="button" id="copyTelemetryJson"><i class="bi bi-clipboard"></i> Copy JSON</button>
+            <button class="btn btn-sm btn-outline-light" type="button" id="downloadTelemetryJson"><i class="bi bi-download"></i> Download JSON</button>
+            <a class="btn btn-sm btn-info" id="openTelemetryEndpoint" href="#"><i class="bi bi-pc-display"></i> Open Endpoint</a>
+        </div>
+        <pre id="telemetryRawJson" class="json-panel"></pre>
+    </div>
+</div>
+{% endblock %}

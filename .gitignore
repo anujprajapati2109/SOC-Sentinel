@@ -1,0 +1,76 @@
+# Python
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# IDE / editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Logs
+logs/
+*.log
+soc_server/logs/
+agent/logs/
+agent/dist/logs/
+
+# Databases and backups
+*.db
+*.sqlite
+*.sqlite3
+soc_server/database/*.db
+soc_server/database/backups/
+
+# Runtime configuration and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.pfx
+aws_credentials
+agent/config.json
+agent/dist/config.json
+
+# PyInstaller and generated binaries
+build/
+dist/
+agent/build/
+agent/dist/
+*.spec.bak
+*.exe
+*.pkg
+
+# Temporary files
+*.tmp
+*.bak
+*.old
+*.orig
+
+# OS/package artifacts
+*.zip
+*.tar
+*.tar.gz
+*.7z

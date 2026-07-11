@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Endpoints | SOC Sentinel{% endblock %}
+{% block page_title %}Endpoints{% endblock %}
+
+{% block content %}
+<section id="live-table-section" class="panel mt-4">
+    <div class="panel-header">
+        <div>
+            <h2>Endpoint Inventory</h2>
+            <p>Registered devices managed by SOC Sentinel agents.</p>
+        </div>
+        <div class="button-row">
+            <a class="btn btn-sm btn-outline-success" href="{{ url_for('dashboard.endpoints', status='online') }}">Online</a>
+            <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('dashboard.endpoints', status='offline') }}">Offline</a>
+            <a class="btn btn-sm btn-outline-info" href="{{ url_for('dashboard.response_center') }}">Response</a>
+            <a class="btn btn-sm btn-outline-light" href="{{ url_for('dashboard.endpoints') }}">Clear</a>
+        </div>
+    </div>
+
+    <div class="table-toolbar" data-table-toolbar></div>
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0 soc-table" data-page-size="25">
+            <thead>
+                <tr>
+                    <th>Endpoint ID</th>
+                    <th>Hostname</th>
+                    <th>Operating System</th>
+                    <th>IP Address</th>
+                    <th>Agent Version</th>
+                    <th>Status</th>
+                    <th>Last Heartbeat</th>
+                    <th>Last Telemetry</th>
+                    <th>Pending Commands</th>
+                    <th>Last Command</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for endpoint in endpoints %}
+                {% set commands = command_context.get(endpoint.endpoint_id, {}) %}
+                {% set last_command = commands.get("last_command") %}
+                {% set last_telemetry = telemetry_context.get(endpoint.endpoint_id) %}
+                <tr class="clickable-row" data-href="{{ url_for('dashboard.endpoint_details', endpoint_id=endpoint.endpoint_id) }}">
+                    <td><a class="table-link" href="{{ url_for('dashboard.endpoint_details', endpoint_id=endpoint.endpoint_id) }}">{{ endpoint.endpoint_id }}</a></td>
+                    <td>{{ endpoint.hostname }}</td>
+                    <td>{{ endpoint.operating_system or "Unknown" }} {{ endpoint.os_version or "" }}</td>
+                    <td>{{ endpoint.ip_address or "Unknown" }}</td>
+                    <td>{{ endpoint.agent_version or "Unknown" }}</td>
+                    <td>
+                        {% if endpoint.status == "Online" %}
+                        <a class="badge rounded-pill text-bg-success text-decoration-none" href="{{ url_for('dashboard.endpoints', status='online') }}">Online</a>
+                        {% else %}
+                        <a class="badge rounded-pill text-bg-secondary text-decoration-none" href="{{ url_for('dashboard.endpoints', status='offline') }}">Offline</a>
+                        {% endif %}
+                    </td>
+                    <td>{{ time_ago(endpoint.last_seen) }}</td>
+                    <td>{{ time_ago(last_telemetry.timestamp) if last_telemetry else "Never" }}</td>
+                    <td>
+                        <a class="badge rounded-pill text-bg-{% if commands.get('pending_commands', 0) %}warning{% else %}secondary{% endif %} text-decoration-none" href="{{ url_with_query('dashboard.response_center', endpoint=endpoint.endpoint_id, status='PENDING') }}">
+                            {{ commands.get("pending_commands", 0) }}
+                        </a>
+                    </td>
+                    <td>
+                        {% if last_command %}
+                        <a class="table-link" href="{{ url_with_query('dashboard.response_center', endpoint=endpoint.endpoint_id) }}">{{ last_command.command_type }} ({{ last_command.status }})</a>
+                        {% else %}
+                        None
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr class="empty-row"><td colspan="10"><i class="bi bi-pc-display"></i>No endpoints registered</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

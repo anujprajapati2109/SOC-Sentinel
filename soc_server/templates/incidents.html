@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Incidents | SOC Sentinel{% endblock %}
+{% block page_title %}Incidents{% endblock %}
+
+{% block content %}
+<section id="live-table-section" class="panel mt-4">
+    <div class="panel-header">
+        <div>
+            <h2>Correlated Incidents</h2>
+            <p>Filter and pivot through incidents created by alert correlation.</p>
+        </div>
+        <i class="bi bi-folder2-open panel-icon"></i>
+    </div>
+
+    <form class="filter-bar" method="get">
+        <select class="form-select form-select-sm" name="severity">
+            <option value="">Severity</option>
+            {% for severity in ["medium", "high", "critical"] %}
+            <option value="{{ severity }}" {% if filters.severity == severity %}selected{% endif %}>{{ severity|title }}</option>
+            {% endfor %}
+        </select>
+        <input class="form-control form-control-sm" name="endpoint" placeholder="Endpoint" value="{{ filters.endpoint }}">
+        <input class="form-control form-control-sm" name="rule" placeholder="Correlation Rule" value="{{ filters.rule }}">
+        <input class="form-control form-control-sm" name="mitre" placeholder="MITRE" value="{{ filters.mitre }}">
+        <select class="form-select form-select-sm" name="status">
+            <option value="">Status</option>
+            {% for status in ["OPEN", "ASSIGNED", "INVESTIGATING", "CONTAINED", "RESOLVED", "CLOSED", "FALSE_POSITIVE"] %}
+            <option value="{{ status }}" {% if filters.status == status %}selected{% endif %}>{{ status }}</option>
+            {% endfor %}
+        </select>
+        <select class="form-select form-select-sm" name="date">
+            <option value="">Any date</option>
+            <option value="today" {% if filters.date == "today" %}selected{% endif %}>Today</option>
+        </select>
+        <button class="btn btn-sm btn-info" type="submit"><i class="bi bi-funnel"></i> Filter</button>
+        <a class="btn btn-sm btn-outline-light" href="{{ url_for('dashboard.incidents') }}">Clear</a>
+    </form>
+
+    <div class="table-toolbar" data-table-toolbar></div>
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0 soc-table" data-page-size="25">
+            <thead>
+                <tr><th>Incident ID</th><th>Title</th><th>Severity</th><th>Priority</th><th>Endpoint</th><th>Correlation Rule</th><th>Assigned To</th><th>Confidence</th><th>Risk Score</th><th>Status</th><th>Created</th></tr>
+            </thead>
+            <tbody>
+                {% for incident in incidents %}
+                <tr class="clickable-row" data-href="{{ url_for('dashboard.incident_details', incident_id=incident.incident_id) }}">
+                    <td><a class="table-link" href="{{ url_for('dashboard.incident_details', incident_id=incident.incident_id) }}">{{ incident.incident_id }}</a></td>
+                    <td>{{ incident.title }}</td>
+                    <td><a class="badge severity-badge severity-{{ incident.severity }} text-decoration-none" href="{{ url_for('dashboard.incidents', severity=incident.severity) }}">{{ incident.severity }}</a></td>
+                    <td><span class="badge rounded-pill text-bg-{% if incident.priority == 'Critical' %}danger{% elif incident.priority == 'High' %}warning{% elif incident.priority == 'Low' %}secondary{% else %}info{% endif %}">{{ incident.priority or "Medium" }}</span></td>
+                    <td><a class="table-link" href="{{ url_for('dashboard.endpoint_details', endpoint_id=incident.endpoint_id) }}">{{ incident.endpoint_id }}</a></td>
+                    <td><a class="table-link" href="{{ url_for('dashboard.incidents', rule=incident.correlation_rule_id) }}">{{ incident.correlation_rule_id }}</a></td>
+                    <td>{{ incident.assigned_to or "Unassigned" }}</td>
+                    <td>{{ incident.confidence }}%</td>
+                    <td>{{ incident.risk_score }}</td>
+                    <td><a class="badge rounded-pill text-bg-primary text-decoration-none" href="{{ url_for('dashboard.incidents', status=incident.status) }}">{{ incident.status }}</a></td>
+                    <td>{{ incident.created_at.strftime("%Y-%m-%d %H:%M:%S") if incident.created_at else "Unknown" }}</td>
+                </tr>
+                {% else %}
+                <tr class="empty-row"><td colspan="11"><i class="bi bi-diagram-3"></i>No correlated incidents yet</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

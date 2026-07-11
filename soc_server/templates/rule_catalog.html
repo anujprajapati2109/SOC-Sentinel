@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | SOC Sentinel{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<section class="panel mt-4">
+    <div class="panel-header">
+        <div>
+            <h2>{{ page_title }}</h2>
+            <p>Read-only rule management catalog. Editing will be added in a future administration release.</p>
+        </div>
+        <i class="bi {{ icon }} panel-icon"></i>
+    </div>
+    <div class="table-toolbar" data-table-toolbar></div>
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0 soc-table" data-page-size="25">
+            <thead>
+                <tr>
+                    <th>Rule ID</th>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Severity</th>
+                    <th>Version</th>
+                    <th>Enabled</th>
+                    <th>{{ count_label }}</th>
+                    <th>MITRE Mapping</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in rules %}
+                {% set rule = item.rule %}
+                <tr>
+                    <td class="font-monospace">{{ rule.rule_id }}</td>
+                    <td>{{ rule.name }}</td>
+                    <td>{{ rule.description }}</td>
+                    <td><span class="badge severity-badge severity-{{ rule.severity }}">{{ rule.severity }}</span></td>
+                    <td>{{ item.version }}</td>
+                    <td>
+                        {% if rule.enabled %}
+                        <span class="badge rounded-pill text-bg-success">Enabled</span>
+                        {% else %}
+                        <span class="badge rounded-pill text-bg-secondary">Disabled</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ item.trigger_count }}</td>
+                    <td>{{ rule.mitre_tactic or "Unmapped" }} / {{ rule.mitre_technique or "Unmapped" }}</td>
+                    <td><span class="badge rounded-pill text-bg-primary">Ready</span></td>
+                </tr>
+                {% else %}
+                <tr class="empty-row"><td colspan="9"><i class="bi {{ icon }}"></i>No rules found</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

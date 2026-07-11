@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}System Health | SOC Sentinel{% endblock %}
+{% block page_title %}System Health{% endblock %}
+
+{% block content %}
+<section class="panel mt-4">
+    <div class="panel-header">
+        <div>
+            <h2>System Health</h2>
+            <p>Runtime health for the SOC Sentinel server and local host.</p>
+        </div>
+        <div class="button-row">
+            <form method="post" action="{{ url_for('dashboard.backup_database') }}">
+                <button class="btn btn-sm btn-outline-info" type="submit">
+                    <i class="bi bi-database-down"></i> Backup Database
+                </button>
+            </form>
+            <i class="bi bi-heart-pulse panel-icon"></i>
+        </div>
+    </div>
+    <div class="health-grid">
+        {% for label, value in health.items() %}
+        <div class="health-item">
+            <span>{{ label }}</span>
+            <strong>{{ value }}</strong>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="panel mt-4">
+    <div class="panel-header">
+        <div>
+            <h2>Cloud Status</h2>
+            <p>Deployment configuration and health readiness.</p>
+        </div>
+        <i class="bi bi-cloud-check panel-icon"></i>
+    </div>
+    <div class="health-grid">
+        {% for label, value in cloud.items() %}
+        <div class="health-item">
+            <span>{{ label }}</span>
+            <strong>{{ value }}</strong>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="p-3 pt-0">
+        <p class="text-secondary mb-0">
+            SQLite backups are downloaded directly. PostgreSQL deployments should use pg_dump,
+            managed database snapshots, or provider-native backup tooling.
+        </p>
+    </div>
+</section>
+{% endblock %}
