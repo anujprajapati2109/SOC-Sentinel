@@ -374,6 +374,14 @@ def _database_display() -> str:
     return database_label()
 
 
+def _database_type(uri: str) -> str:
+    if uri.startswith("sqlite:///"):
+        return "SQLite"
+    if uri.startswith("postgresql"):
+        return "PostgreSQL"
+    return "SQLAlchemy Database"
+
+
 def _database_size() -> str:
     if not is_sqlite_database():
         return "Managed externally"
