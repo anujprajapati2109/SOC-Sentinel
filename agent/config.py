@@ -79,8 +79,10 @@ def load_config() -> AgentConfig:
     with CONFIG_PATH.open("r", encoding="utf-8-sig") as config_file:
         data = json.load(config_file)
 
+    raw_server_url = str(data.get("server_url", DEFAULT_SERVER_URL)).strip().rstrip("/")
+    server_url = normalize_server_url(raw_server_url)
     config = AgentConfig(
-        server_url=str(data.get("server_url", DEFAULT_SERVER_URL)).rstrip("/"),
+        server_url=server_url,
         endpoint_id=str(data.get("endpoint_id", "")),
         api_key=str(data.get("api_key", "")),
         device_fingerprint=str(data.get("device_fingerprint", "")),
@@ -91,10 +93,31 @@ def load_config() -> AgentConfig:
         log_level=str(data.get("log_level", "INFO")).upper(),
     )
 
-    if _is_missing_new_fields(data):
+    if _is_missing_new_fields(data) or raw_server_url != server_url:
         save_config(config)
 
     return config
+
+
+def normalize_server_url(server_url: str) -> str:
+    """Return the configured server URL, upgrading stale localhost defaults."""
+
+    if not server_url:
+        return DEFAULT_SERVER_URL
+
+    localhost_urls = {
+        "http://127.0.0.1:5000",
+        "http://localhost:5000",
+    }
+    allow_localhost = os.getenv("SOC_SENTINEL_ALLOW_LOCALHOST", "").lower()
+    if (
+        server_url.lower() in localhost_urls
+        and DEFAULT_SERVER_URL.lower() not in localhost_urls
+        and allow_localhost not in {"1", "true", "yes"}
+    ):
+        return DEFAULT_SERVER_URL
+
+    return server_url
 
 
 def save_config(config: AgentConfig) -> None:
