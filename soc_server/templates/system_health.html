@@ -41,7 +41,11 @@
         {% for label, value in cloud.items() %}
         <div class="health-item">
             <span>{{ label }}</span>
+            {% if label == "Public URL" and value != "N/A" %}
+            <strong><a class="table-link" href="{{ value }}" target="_blank" rel="noopener noreferrer">{{ value }}</a></strong>
+            {% else %}
             <strong>{{ value }}</strong>
+            {% endif %}
         </div>
         {% endfor %}
     </div>

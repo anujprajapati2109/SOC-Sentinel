@@ -1,78 +1,67 @@
 # SOC Sentinel AWS EC2 Deployment Guide
 
-This guide prepares SOC Sentinel for production deployment on AWS EC2 running Ubuntu 26.04 LTS, Python 3.14, Gunicorn, and Nginx.
+This guide documents the production deployment used for SOC Sentinel on AWS EC2 with Ubuntu 26.04, Python 3.14, Nginx, Gunicorn, systemd, Flask, and SQLite.
 
-The repository is prepared only. Deployment still requires you to create the EC2 instance, DNS record, firewall rules, and production secrets.
+Set one deployment path and reuse it in every command:
 
-## 1. EC2 Baseline
+```bash
+export SOC_SENTINEL_HOME=/srv/soc-sentinel/current
+export SOC_SENTINEL_REPO=https://github.com/anujprajapati2109/SOC-Sentinel.git
+```
 
-Recommended starting point:
-
-- Ubuntu 26.04 LTS
-- 2 vCPU
-- 2 GB RAM minimum
-- 20 GB disk minimum
-- Security group allowing SSH, HTTP, and HTTPS
-
-Update the host:
+## Ubuntu Setup
 
 ```bash
 sudo apt update
 sudo apt upgrade -y
-```
-
-Install system packages:
-
-```bash
 sudo apt install -y git nginx python3.14 python3.14-venv python3-pip ufw
 ```
 
-## 2. Dedicated User
-
-Create a non-login service user:
+## Dedicated User
 
 ```bash
-sudo useradd --system --home /opt/soc-sentinel --shell /usr/sbin/nologin soc-sentinel
-sudo mkdir -p /opt/soc-sentinel
-sudo chown soc-sentinel:soc-sentinel /opt/soc-sentinel
+sudo useradd --system --home /srv/soc-sentinel --shell /usr/sbin/nologin soc-sentinel || true
+sudo mkdir -p "$(dirname "$SOC_SENTINEL_HOME")"
+sudo chown -R soc-sentinel:soc-sentinel "$(dirname "$SOC_SENTINEL_HOME")"
 ```
 
-## 3. Clone Repository
+## Git Clone
 
 ```bash
-sudo -u soc-sentinel git clone https://github.com/anujprajapati2109/SOC-Sentinel.git /opt/soc-sentinel/SOC-Sentinel
-cd /opt/soc-sentinel/SOC-Sentinel
+sudo -u soc-sentinel git clone "$SOC_SENTINEL_REPO" "$SOC_SENTINEL_HOME"
+cd "$SOC_SENTINEL_HOME"
 ```
 
-## 4. Python Virtual Environment
+## Python Virtual Environment
 
 ```bash
-sudo -u soc-sentinel python3.14 -m venv /opt/soc-sentinel/SOC-Sentinel/.venv
-sudo -u soc-sentinel /opt/soc-sentinel/SOC-Sentinel/.venv/bin/python -m pip install --upgrade pip
-sudo -u soc-sentinel /opt/soc-sentinel/SOC-Sentinel/.venv/bin/pip install -r /opt/soc-sentinel/SOC-Sentinel/soc_server/requirements.txt
+sudo -u soc-sentinel python3.14 -m venv "$SOC_SENTINEL_HOME/.venv"
+sudo -u soc-sentinel "$SOC_SENTINEL_HOME/.venv/bin/python" -m pip install --upgrade pip
+sudo -u soc-sentinel "$SOC_SENTINEL_HOME/.venv/bin/pip" install -r "$SOC_SENTINEL_HOME/soc_server/requirements.txt"
 ```
 
-## 5. Environment Configuration
-
-Create the production environment file:
+## Environment
 
 ```bash
-sudo cp /opt/soc-sentinel/SOC-Sentinel/.env.example /opt/soc-sentinel/SOC-Sentinel/.env
-sudo nano /opt/soc-sentinel/SOC-Sentinel/.env
-sudo chown soc-sentinel:soc-sentinel /opt/soc-sentinel/SOC-Sentinel/.env
-sudo chmod 600 /opt/soc-sentinel/SOC-Sentinel/.env
+sudo cp "$SOC_SENTINEL_HOME/.env.example" "$SOC_SENTINEL_HOME/.env"
+sudo nano "$SOC_SENTINEL_HOME/.env"
+sudo chown soc-sentinel:soc-sentinel "$SOC_SENTINEL_HOME/.env"
+sudo chmod 600 "$SOC_SENTINEL_HOME/.env"
 ```
 
 Minimum production values:
 
 ```text
 SOC_SENTINEL_ENV=production
-SECRET_KEY=<generate-a-long-random-secret>
-DATABASE_URL=sqlite:////opt/soc-sentinel/SOC-Sentinel/soc_server/database/soc_sentinel.db
+SOC_SENTINEL_HOME=/srv/soc-sentinel/current
+SECRET_KEY=<generated-secret>
+DATABASE_URL=
+DATABASE_PATH=soc_server/database/soc_sentinel.db
+LOG_DIR=soc_server/logs
 HOST=127.0.0.1
 PORT=5000
 LOG_LEVEL=INFO
-SERVER_URL=https://your-domain.example.com
+SERVER_URL=http://<public-ip-or-domain>
 SESSION_TIMEOUT=3600
 ```
 
@@ -85,74 +74,66 @@ print(secrets.token_urlsafe(48))
 PY
 ```
 
-For PostgreSQL, use a SQLAlchemy URL such as:
+## Gunicorn
+
+The WSGI entrypoint is:
 
 ```text
-DATABASE_URL=postgresql://soc_user:strong-password@db-host:5432/soc_sentinel
+soc_server/wsgi.py -> application
 ```
 
-## 6. Systemd Service
-
-Install the service unit:
+Run manually:
 
 ```bash
-sudo cp /opt/soc-sentinel/SOC-Sentinel/deploy/systemd/soc-sentinel.service /etc/systemd/system/soc-sentinel.service
+cd "$SOC_SENTINEL_HOME/soc_server"
+"$SOC_SENTINEL_HOME/.venv/bin/gunicorn" \
+  --workers 3 \
+  --bind 127.0.0.1:5000 \
+  --access-logfile - \
+  --error-logfile - \
+  --timeout 120 \
+  wsgi:application
+```
+
+## systemd
+
+Install the systemd template after replacing `__SOC_SENTINEL_HOME__`:
+
+```bash
+sudo sed "s#__SOC_SENTINEL_HOME__#$SOC_SENTINEL_HOME#g" \
+  "$SOC_SENTINEL_HOME/deploy/systemd/soc-sentinel.service" \
+  | sudo tee /etc/systemd/system/soc-sentinel.service > /dev/null
+
 sudo systemctl daemon-reload
 sudo systemctl enable soc-sentinel
-sudo systemctl start soc-sentinel
-```
-
-Check status:
-
-```bash
-sudo systemctl status soc-sentinel --no-pager
-journalctl -u soc-sentinel -f
-```
-
-## 7. Nginx Reverse Proxy
-
-Install the Nginx site:
-
-```bash
-sudo cp /opt/soc-sentinel/SOC-Sentinel/deploy/nginx/soc-sentinel.conf /etc/nginx/sites-available/soc-sentinel
-sudo ln -s /etc/nginx/sites-available/soc-sentinel /etc/nginx/sites-enabled/soc-sentinel
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-Edit `server_name` before production use:
-
-```bash
-sudo nano /etc/nginx/sites-available/soc-sentinel
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-## 8. HTTPS
-
-Install Certbot:
-
-```bash
-sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d your-domain.example.com
-```
-
-After HTTPS is enabled, set:
-
-```text
-SERVER_URL=https://your-domain.example.com
-PUBLIC_URL=https://your-domain.example.com
-```
-
-Restart:
-
-```bash
 sudo systemctl restart soc-sentinel
+sudo systemctl status soc-sentinel --no-pager
 ```
 
-## 9. Firewall
+Confirm automatic boot startup is enabled:
 
-Enable UFW:
+```bash
+systemctl is-enabled soc-sentinel
+```
+
+## Nginx
+
+Install the Nginx template after replacing `__SOC_SENTINEL_HOME__`:
+
+```bash
+sudo sed "s#__SOC_SENTINEL_HOME__#$SOC_SENTINEL_HOME#g" \
+  "$SOC_SENTINEL_HOME/deploy/nginx/soc-sentinel.conf" \
+  | sudo tee /etc/nginx/sites-available/soc-sentinel > /dev/null
+
+sudo ln -sf /etc/nginx/sites-available/soc-sentinel /etc/nginx/sites-enabled/soc-sentinel
+sudo nginx -t
+sudo systemctl enable nginx
+sudo systemctl reload nginx
+```
+
+For a DNS name, edit `server_name` in `/etc/nginx/sites-available/soc-sentinel`.
+
+## Firewall
 
 ```bash
 sudo ufw allow OpenSSH
@@ -161,146 +142,86 @@ sudo ufw enable
 sudo ufw status
 ```
 
-AWS security group should allow:
+AWS security group:
 
-- TCP 22 from your admin IP only
-- TCP 80 from the internet
-- TCP 443 from the internet
+- TCP 22 from your admin IP only.
+- TCP 80 from the internet.
+- TCP 443 from the internet when HTTPS is enabled.
+- Do not expose TCP 5000 publicly.
 
-Do not expose port `5000` publicly. Gunicorn should bind to `127.0.0.1:5000`.
-
-## 10. Health Check
-
-Local check:
+## Health Checks
 
 ```bash
 curl http://127.0.0.1:5000/health
+curl http://<public-ip-or-domain>/health
 ```
 
-Public check:
-
-```bash
-curl https://your-domain.example.com/health
-```
-
-Expected fields:
+Expected result includes:
 
 ```json
 {
   "status": "ok",
-  "version": "0.9.0",
-  "uptime": "1 min",
-  "database": "online"
+  "application_mode": "production",
+  "database_status": "online"
 }
 ```
 
-## 11. Running Manually
-
-Manual Linux startup:
+## Updating
 
 ```bash
-cd /opt/soc-sentinel/SOC-Sentinel
-chmod +x start.sh
-./start.sh
-```
-
-Systemd is preferred for production.
-
-## 12. Updating
-
-```bash
-cd /opt/soc-sentinel/SOC-Sentinel
+cd "$SOC_SENTINEL_HOME"
 sudo -u soc-sentinel git pull
-sudo -u soc-sentinel ./.venv/bin/pip install -r soc_server/requirements.txt
+sudo -u soc-sentinel "$SOC_SENTINEL_HOME/.venv/bin/pip" install -r "$SOC_SENTINEL_HOME/soc_server/requirements.txt"
 sudo systemctl restart soc-sentinel
+sudo systemctl reload nginx
 ```
 
-## 13. Restarting
+## Restarting
 
 ```bash
 sudo systemctl restart soc-sentinel
 sudo systemctl status soc-sentinel --no-pager
-```
-
-Reload Nginx:
-
-```bash
 sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-## 14. Logs
-
-Application logs:
+## Logs
 
 ```bash
-sudo ls -lah /opt/soc-sentinel/SOC-Sentinel/soc_server/logs
-sudo tail -f /opt/soc-sentinel/SOC-Sentinel/soc_server/logs/application.log
-sudo tail -f /opt/soc-sentinel/SOC-Sentinel/soc_server/logs/error.log
-sudo tail -f /opt/soc-sentinel/SOC-Sentinel/soc_server/logs/access.log
-```
-
-System service logs:
-
-```bash
-journalctl -u soc-sentinel -f
-```
-
-Nginx logs:
-
-```bash
+sudo journalctl -u soc-sentinel -f
+sudo tail -f "$SOC_SENTINEL_HOME/soc_server/logs/application.log"
+sudo tail -f "$SOC_SENTINEL_HOME/soc_server/logs/error.log"
+sudo tail -f "$SOC_SENTINEL_HOME/soc_server/logs/access.log"
 sudo tail -f /var/log/nginx/access.log
 sudo tail -f /var/log/nginx/error.log
 ```
 
-## 15. Troubleshooting
-
-Check service startup:
+## Troubleshooting
 
 ```bash
 sudo systemctl status soc-sentinel --no-pager
-journalctl -u soc-sentinel -n 100 --no-pager
-```
-
-Check Gunicorn port:
-
-```bash
+sudo journalctl -u soc-sentinel -n 100 --no-pager
 ss -ltnp | grep 5000
-```
-
-Check Nginx config:
-
-```bash
 sudo nginx -t
-```
-
-Check database file permissions:
-
-```bash
-sudo chown -R soc-sentinel:soc-sentinel /opt/soc-sentinel/SOC-Sentinel/soc_server/database
+curl http://127.0.0.1:5000/health
 ```
 
 Common failures:
 
-- `502 Bad Gateway`: Gunicorn is not running or Nginx points to the wrong port.
-- `database error`: database path is wrong or service user lacks permission.
-- static files missing: Nginx `alias` path does not match the clone path.
-- health endpoint fails: check `.env`, service logs, and database connectivity.
+- `502 Bad Gateway`: Gunicorn is not running, or Nginx points at the wrong port.
+- `database error`: database path is wrong, or `soc-sentinel` lacks write permission.
+- static files missing: Nginx static alias was installed with the wrong `SOC_SENTINEL_HOME`.
+- placeholder public URL: set `SERVER_URL` in `.env`, or access through Nginx so Flask can infer the public host.
 
 ## Deployment Verification Checklist
 
-- EC2 security group exposes only SSH, HTTP, and HTTPS.
-- `soc-sentinel` Linux user exists.
-- Repository is cloned under `/opt/soc-sentinel/SOC-Sentinel`.
-- `.env` exists and is not committed to Git.
-- `SECRET_KEY` is changed from the example value.
-- `SERVER_URL` uses the real public URL.
-- Python virtual environment is created.
-- `soc_server/requirements.txt` installs successfully.
-- `soc-sentinel.service` is enabled.
-- `systemctl status soc-sentinel` is healthy.
-- Nginx config passes `nginx -t`.
-- Public `/health` returns `status: ok`.
-- Dashboard opens through HTTPS.
-- Agent config points to the production `SERVER_URL`.
-- Port `5000` is not open to the internet.
+- `nginx` is enabled and active.
+- `soc-sentinel.service` is enabled and active.
+- Gunicorn is listening only on `127.0.0.1:5000`.
+- Nginx is the only public HTTP entry point.
+- `/health` returns `status: ok`.
+- Dashboard loads from the EC2 public IP or domain.
+- Static CSS and JavaScript load with HTTP 200.
+- `.env` contains a real `SECRET_KEY`.
+- `.env` contains a real `SERVER_URL` or the dashboard correctly infers the request URL.
+- Windows agent config points to the public deployment URL.

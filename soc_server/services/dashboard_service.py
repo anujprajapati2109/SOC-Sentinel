@@ -1,5 +1,6 @@
 import time
 from datetime import datetime, timedelta, timezone
+import platform
 from threading import RLock
 from typing import Any
 
@@ -18,6 +19,13 @@ from models import (
     utc_now,
 )
 from utils.constants import STATUS_OFFLINE, STATUS_ONLINE
+from utils.deployment_status import (
+    effective_public_url,
+    gunicorn_status,
+    hostname,
+    process_status,
+    server_ip,
+)
 
 
 try:
@@ -399,7 +407,12 @@ class DashboardService:
 
         return {
             "application_mode": current_app.config["APPLICATION_MODE"],
-            "public_url": current_app.config["PUBLIC_URL"],
+            "public_url": effective_public_url(),
+            "server_ip": server_ip(),
+            "hostname": hostname(),
+            "operating_system": platform.platform(),
+            "gunicorn_status": gunicorn_status(),
+            "nginx_status": process_status("nginx"),
             "database": _database_type(current_app.config["SQLALCHEMY_DATABASE_URI"]),
             "server_uptime": _format_duration(time.time() - DASHBOARD_STARTED_AT),
             "connected_endpoints": Endpoint.query.filter_by(status=STATUS_ONLINE).count(),

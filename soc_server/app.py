@@ -16,6 +16,7 @@ from services.detection_rule_service import seed_detection_rules
 from services.platform_service import APP_SUBTITLE, APP_VERSION
 from services.settings_service import seed_settings
 from models import utc_now
+from utils.deployment_status import effective_public_url
 from utils.logging_config import ERROR_LOGGER, configure_logging
 import logging
 
@@ -65,7 +66,7 @@ def register_template_context(app: Flask) -> None:
                 "dashboard_refresh_interval",
                 "5",
             ),
-            "public_url": app.config["PUBLIC_URL"],
+            "public_url": effective_public_url(),
             "application_mode": app.config["APPLICATION_MODE"],
             "server_time": utc_now(),
         }

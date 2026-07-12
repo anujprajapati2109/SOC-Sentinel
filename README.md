@@ -6,23 +6,20 @@ SOC Sentinel is a Python-based cybersecurity platform for learning and prototypi
 
 The project is intentionally modular: API routes stay thin, business logic lives in services, detection logic lives in independent rules, and the Windows agent remains separate from the Flask server.
 
-> Status: Version 0.9.0 Cloud Edition.
+> Status: Version 1.0 production validation build.
 
 ## Architecture
 
-```text
-Windows Agent
-    |
-    | register / heartbeat / telemetry / command polling
-    v
-SOC Sentinel Flask Server
-    |
-    | SQLAlchemy services
-    v
-SQLite or PostgreSQL
-    |
-    v
-Dark Bootstrap SOC Dashboard
+```mermaid
+flowchart LR
+    Agent["Windows SOC Agent"] -->|"registration / heartbeat / telemetry"| Nginx["Nginx"]
+    Browser["SOC Dashboard"] --> Nginx
+    Nginx -->|"127.0.0.1:5000"| Gunicorn["Gunicorn"]
+    Gunicorn --> Flask["Flask SOC Server"]
+    Flask --> Services["Service Layer"]
+    Services --> SQLite["SQLite"]
+    Services --> Detection["Detection Engine"]
+    Services --> Correlation["Correlation Engine"]
 ```
 
 Core server modules:
@@ -54,9 +51,9 @@ Agent modules:
 - Alert dashboard and alert detail views.
 - Stateful correlation rules that generate investigation incidents.
 - Incident response workspace with notes, history, status, priority, assignment, and exports.
-- Endpoint response command framework with safe placeholder actions.
+- Endpoint response command framework with safe operator actions.
 - Live SOC Intelligence dashboard with operational statistics.
-- Health API for deployment checks.
+- Health API and Cloud Status panel for production validation.
 - Environment-based configuration for local, LAN, and cloud deployments.
 - SQLite by default with optional PostgreSQL support.
 - Waitress and Gunicorn deployment guidance.
@@ -76,7 +73,7 @@ Suggested captures:
 
 ## Technology Stack
 
-- Python 3.12+
+- Python 3.12+ for development, Python 3.14 validated for AWS deployment
 - Flask
 - SQLAlchemy
 - SQLite
@@ -129,6 +126,7 @@ Temporary Windows launcher:
 The health API is available at:
 
 ```text
+GET /health
 GET /api/v1/health
 ```
 
@@ -151,7 +149,7 @@ Set `server_url` to the SOC Sentinel server URL for your environment:
 
 ```json
 {
-  "server_url": "https://your-server.example.com",
+  "server_url": "<soc-sentinel-server-url>",
   "endpoint_id": "",
   "api_key": "",
   "heartbeat_interval": 30,
@@ -173,14 +171,15 @@ On first run, the agent registers automatically and stores its generated endpoin
 
 SOC Sentinel supports local, LAN, and cloud deployments through configuration only.
 
-Required environment variables:
+Production environment variables:
 
 - `SECRET_KEY`
-- `DATABASE_URL`
-- `SERVER_HOST`
-- `SERVER_PORT`
-- `PUBLIC_URL`
+- `DATABASE_URL` or `DATABASE_PATH`
+- `HOST`
+- `PORT`
+- `SERVER_URL`
 - `LOG_LEVEL`
+- `SESSION_TIMEOUT`
 
 Recommended production options:
 
@@ -191,6 +190,9 @@ Recommended production options:
 
 See:
 
+- `docs/DEPLOYMENT_AWS.md`
+- `docs/DEPLOYMENT_CHECKLIST.md`
+- `docs/ARCHITECTURE.md`
 - `docs/DEPLOYMENT_GUIDE.md`
 - `docs/DEVELOPMENT_GUIDE.md`
 - `docs/ORACLE_CLOUD_DEPLOYMENT_GUIDE.md`
@@ -206,6 +208,7 @@ SOC-Sentinel/
 |   |-- config.example.json
 |   |-- main.py
 |   `-- requirements.txt
+|-- deploy/
 |-- docs/
 |-- screenshots/
 |-- soc_server/
@@ -230,6 +233,9 @@ SOC-Sentinel/
 |-- LICENSE
 |-- README.md
 |-- Start-SOC-Sentinel.bat
+|-- start.sh
+|-- start.bat
+|-- start.ps1
 `-- Start-SOC-Sentinel.ps1
 ```
 
@@ -244,7 +250,7 @@ SOC-Sentinel/
 - v0.7: Incident response and investigation workflow.
 - v0.8: Endpoint response command framework.
 - v0.9: Cloud-ready configuration, health checks, logging, backup, deployment docs.
-- v1.0: Stabilization, packaging, hardening, and release documentation.
+- v1.0: Production validation, EC2 deployment accuracy, health checks, and release documentation.
 
 ## Version History
 
@@ -260,6 +266,10 @@ This project is not a replacement for a production EDR or SIEM. Authentication, 
 
 MIT License. See `LICENSE`.
 
-## Author
+## Developer
 
-Anuj
+Anuj Prajapati
+
+- Portfolio: [anuj.unaux.com](https://anuj.unaux.com)
+- LinkedIn: [anuj-prajapati-work](https://www.linkedin.com/in/anuj-prajapati-work/)
+- GitHub: [anujprajapati2109](https://github.com/anujprajapati2109)

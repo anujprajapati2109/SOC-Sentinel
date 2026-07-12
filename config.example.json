@@ -1,5 +1,5 @@
 {
-  "server_url": "https://your-server.example.com",
+  "server_url": "",
   "endpoint_id": "",
   "api_key": "",
   "heartbeat_interval": 30,

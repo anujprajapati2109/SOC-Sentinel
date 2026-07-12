@@ -3,14 +3,13 @@ import shutil
 import sqlite3
 import sys
 import time
+from importlib.metadata import version
 from pathlib import Path
 from typing import Any
 
-import flask
 from flask import current_app
 from sqlalchemy import func, text
 
-from config import Config
 from models import (
     Alert,
     CorrelatedIncident,
@@ -28,6 +27,13 @@ from services.dashboard_service import dashboard_service
 from services.backup_service import database_label, is_sqlite_database
 from services.settings_service import get_setting_value
 from utils.constants import STATUS_OFFLINE, STATUS_ONLINE
+from utils.deployment_status import (
+    effective_public_url,
+    gunicorn_status,
+    hostname,
+    process_status,
+    server_ip,
+)
 
 
 try:
@@ -37,7 +43,7 @@ except ImportError:  # pragma: no cover - optional package fallback.
 
 
 SERVER_STARTED_AT = time.time()
-APP_VERSION = "0.9.0"
+APP_VERSION = "1.0.0"
 APP_SUBTITLE = "A Lightweight Endpoint Detection, Response & Security Operations Platform"
 DEVELOPER = "Anuj"
 
@@ -99,7 +105,7 @@ def get_system_information() -> dict[str, Any]:
 
     return {
         "Python Version": sys.version.split()[0],
-        "Flask Version": flask.__version__,
+        "Flask Version": version("flask"),
         "SQLite Version": sqlite3.sqlite_version,
         "Platform": platform.platform(),
         "Server Uptime": _format_duration(time.time() - SERVER_STARTED_AT),
@@ -117,7 +123,7 @@ def get_system_health() -> dict[str, Any]:
     except Exception:
         database_status = "Error"
 
-    disk = shutil.disk_usage(Config.BASE_DIR)
+    disk = shutil.disk_usage(current_app.config["BASE_DIR"])
     memory_usage = None
     cpu_usage = None
     if psutil is not None:
@@ -130,7 +136,12 @@ def get_system_health() -> dict[str, Any]:
         "Database Size": _database_size(),
         "Server Uptime": _format_duration(time.time() - SERVER_STARTED_AT),
         "Application Mode": current_app.config["APPLICATION_MODE"],
-        "Public URL": current_app.config["PUBLIC_URL"],
+        "Public URL": effective_public_url(),
+        "Server IP": server_ip(),
+        "Hostname": hostname(),
+        "Operating System": platform.platform(),
+        "Gunicorn Status": gunicorn_status(),
+        "Nginx Status": process_status("nginx"),
         "Memory Usage": f"{memory_usage}%" if memory_usage is not None else "N/A",
         "CPU Usage": f"{cpu_usage}%" if cpu_usage is not None else "N/A",
         "Disk Usage": f"{round((disk.used / disk.total) * 100, 1)}%",
@@ -147,7 +158,13 @@ def get_cloud_status() -> dict[str, Any]:
     health = get_system_health()
     return {
         "Application Mode": current_app.config["APPLICATION_MODE"],
-        "Public URL": current_app.config["PUBLIC_URL"],
+        "Public URL": effective_public_url(),
+        "Server IP": health["Server IP"],
+        "Hostname": health["Hostname"],
+        "Operating System": health["Operating System"],
+        "Gunicorn Status": health["Gunicorn Status"],
+        "Nginx Status": health["Nginx Status"],
+        "Database Type": _database_type(current_app.config["SQLALCHEMY_DATABASE_URI"]),
         "Database": _database_display(),
         "Server Uptime": health["Server Uptime"],
         "Connected Endpoints": Endpoint.query.filter_by(status=STATUS_ONLINE).count(),
@@ -162,7 +179,12 @@ def get_about_data() -> dict[str, Any]:
         "name": "SOC Sentinel",
         "subtitle": APP_SUBTITLE,
         "version": APP_VERSION,
-        "developer": DEVELOPER,
+        "developer": {
+            "name": "Anuj Prajapati",
+            "portfolio": "https://anuj.unaux.com",
+            "linkedin": "https://www.linkedin.com/in/anuj-prajapati-work/",
+            "github": "https://github.com/anujprajapati2109",
+        },
         "architecture": [
             "Windows Agent",
             "Flask SOC Server",

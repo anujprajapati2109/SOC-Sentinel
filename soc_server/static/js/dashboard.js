@@ -216,6 +216,11 @@ function renderCloudStatus(status) {
     const rows = [
         ["Application Mode", status.application_mode],
         ["Public URL", status.public_url],
+        ["Server IP", status.server_ip],
+        ["Hostname", status.hostname],
+        ["Operating System", status.operating_system],
+        ["Gunicorn Status", status.gunicorn_status],
+        ["Nginx Status", status.nginx_status],
         ["Database", status.database],
         ["Server Uptime", status.server_uptime],
         ["Connected Endpoints", status.connected_endpoints],
@@ -225,9 +230,18 @@ function renderCloudStatus(status) {
     target.innerHTML = rows.map(([label, value]) => `
         <div class="health-item">
             <span>${escapeHtml(label)}</span>
-            <strong>${escapeHtml(formatValue(value))}</strong>
+            <strong>${formatCloudValue(label, value)}</strong>
         </div>
     `).join("");
+}
+
+function formatCloudValue(label, value) {
+    const formatted = formatValue(value);
+    if (label === "Public URL" && formatted !== "N/A") {
+        const href = formatted.startsWith("http") ? formatted : `https://${formatted}`;
+        return `<a class="table-link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(formatted)}</a>`;
+    }
+    return escapeHtml(formatted);
 }
 
 function initializeTimelineControls() {

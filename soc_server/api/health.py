@@ -4,7 +4,13 @@ from flask import Blueprint, current_app, jsonify
 from sqlalchemy import text
 
 from models import db
-from services.platform_service import APP_VERSION, SERVER_STARTED_AT, _format_duration
+from services.platform_service import (
+    APP_VERSION,
+    SERVER_STARTED_AT,
+    _format_duration,
+    get_system_health,
+)
+from utils.deployment_status import effective_public_url
 
 
 health_api_bp = Blueprint("health_api", __name__)
@@ -23,16 +29,26 @@ def health():
         database_status = "error"
         status = "degraded"
         status_code = 503
+    health = get_system_health()
 
     return (
         jsonify(
             {
                 "status": status,
+                "application_version": APP_VERSION,
                 "version": APP_VERSION,
-                "database": database_status,
-                "uptime": _format_duration(time.time() - SERVER_STARTED_AT),
+                "application_mode": current_app.config["APPLICATION_MODE"],
                 "mode": current_app.config["APPLICATION_MODE"],
-                "public_url": current_app.config["PUBLIC_URL"],
+                "database": database_status,
+                "database_status": database_status,
+                "gunicorn_running": health["Gunicorn Status"],
+                "nginx_reachable": health["Nginx Status"],
+                "disk_usage": health["Disk Usage"],
+                "memory_usage": health["Memory Usage"],
+                "cpu_usage": health["CPU Usage"],
+                "uptime": _format_duration(time.time() - SERVER_STARTED_AT),
+                "server_uptime": _format_duration(time.time() - SERVER_STARTED_AT),
+                "public_url": effective_public_url(),
             }
         ),
         status_code,

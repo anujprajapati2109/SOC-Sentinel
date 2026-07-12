@@ -3,7 +3,7 @@ from datetime import timedelta
 from pathlib import Path
 
 
-def _database_uri(default_path: Path) -> str:
+def _database_uri(default_path: Path, project_root: Path) -> str:
     """Return configured database URI while preserving SQLite defaults."""
 
     configured = os.getenv("DATABASE_URL")
@@ -14,6 +14,13 @@ def _database_uri(default_path: Path) -> str:
         if configured.startswith("postgresql://"):
             return configured.replace("postgresql://", "postgresql+psycopg://", 1)
         return configured
+
+    configured_path = os.getenv("DATABASE_PATH")
+    if configured_path:
+        database_path = Path(configured_path)
+        if not database_path.is_absolute():
+            database_path = project_root / database_path
+        return f"sqlite:///{database_path.resolve().as_posix()}"
 
     return f"sqlite:///{default_path.as_posix()}"
 
@@ -40,12 +47,19 @@ class Config:
     """Base application configuration for SOC Sentinel."""
 
     BASE_DIR = Path(__file__).resolve().parent
-    DATABASE_DIR = BASE_DIR / "database"
-    DATABASE_PATH = DATABASE_DIR / "soc_sentinel.db"
-    LOG_DIR = BASE_DIR / "logs"
+    PROJECT_ROOT = BASE_DIR.parent
+    DATABASE_DIR = Path(os.getenv("DATABASE_DIR", BASE_DIR / "database"))
+    if not DATABASE_DIR.is_absolute():
+        DATABASE_DIR = PROJECT_ROOT / DATABASE_DIR
+    DATABASE_PATH = Path(os.getenv("DATABASE_PATH", DATABASE_DIR / "soc_sentinel.db"))
+    if not DATABASE_PATH.is_absolute():
+        DATABASE_PATH = PROJECT_ROOT / DATABASE_PATH
+    LOG_DIR = Path(os.getenv("LOG_DIR", BASE_DIR / "logs"))
+    if not LOG_DIR.is_absolute():
+        LOG_DIR = PROJECT_ROOT / LOG_DIR
 
     SECRET_KEY = os.getenv("SECRET_KEY", "change-this-secret-key-before-production")
-    SQLALCHEMY_DATABASE_URI = _database_uri(DATABASE_PATH)
+    SQLALCHEMY_DATABASE_URI = _database_uri(DATABASE_PATH, PROJECT_ROOT)
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     HOST = os.getenv(
         "HOST",

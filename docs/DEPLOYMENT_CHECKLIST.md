@@ -20,7 +20,8 @@ Use this checklist before exposing SOC Sentinel on the internet.
 ## Python
 
 - [ ] Python 3.14 is installed.
-- [ ] Virtual environment exists at `/opt/soc-sentinel/SOC-Sentinel/.venv`.
+- [ ] `SOC_SENTINEL_HOME` points to the deployed repository.
+- [ ] Virtual environment exists at `$SOC_SENTINEL_HOME/.venv`.
 - [ ] Production dependencies are installed.
 - [ ] Gunicorn is available inside the virtual environment.
 
@@ -62,7 +63,7 @@ Use this checklist before exposing SOC Sentinel on the internet.
 ## Health
 
 - [ ] `curl http://127.0.0.1:5000/health` returns `status: ok`.
-- [ ] `curl https://your-domain.example.com/health` returns `status: ok`.
+- [ ] Public `/health` returns `status: ok`.
 - [ ] `database` reports `online`.
 - [ ] Dashboard loads through the public URL.
 

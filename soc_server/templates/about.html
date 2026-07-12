@@ -12,7 +12,23 @@
     </div>
     <div class="about-meta">
         <span>Version {{ about.version }}</span>
-        <span>Developer {{ about.developer }}</span>
+        <span>Developer {{ about.developer.name }}</span>
+    </div>
+</section>
+
+<section class="panel mt-4">
+    <div class="panel-header">
+        <div>
+            <h2>Developer</h2>
+            <p>Project author and professional links.</p>
+        </div>
+        <i class="bi bi-person-badge panel-icon"></i>
+    </div>
+    <div class="health-grid">
+        <div class="health-item"><span>Name</span><strong>{{ about.developer.name }}</strong></div>
+        <div class="health-item"><span>Portfolio</span><strong><a class="table-link" href="{{ about.developer.portfolio }}" target="_blank" rel="noopener noreferrer">{{ about.developer.portfolio }}</a></strong></div>
+        <div class="health-item"><span>LinkedIn</span><strong><a class="table-link" href="{{ about.developer.linkedin }}" target="_blank" rel="noopener noreferrer">anuj-prajapati-work</a></strong></div>
+        <div class="health-item"><span>GitHub</span><strong><a class="table-link" href="{{ about.developer.github }}" target="_blank" rel="noopener noreferrer">anujprajapati2109</a></strong></div>
     </div>
 </section>
 
