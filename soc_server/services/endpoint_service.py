@@ -44,6 +44,12 @@ def serialize_endpoint(endpoint: Endpoint, include_api_key: bool = False) -> dic
         "ip_address": endpoint.ip_address,
         "mac_address": endpoint.mac_address,
         "agent_version": endpoint.agent_version,
+        "python_version": endpoint.python_version,
+        "architecture": endpoint.architecture,
+        "processor": endpoint.processor,
+        "cpu_count": endpoint.cpu_count,
+        "total_memory_mb": endpoint.total_memory_mb,
+        "system_drive": endpoint.system_drive,
         "device_fingerprint": endpoint.device_fingerprint,
         "identity_status": endpoint.identity_status or IDENTITY_UNKNOWN,
         "identity_previous_fingerprint": endpoint.identity_previous_fingerprint,
@@ -61,10 +67,22 @@ def serialize_endpoint(endpoint: Endpoint, include_api_key: bool = False) -> dic
 
 
 def register_endpoint(payload: dict) -> Endpoint:
-    """Register a new endpoint and assign its endpoint ID and API key."""
+    """Register an endpoint or reuse an existing identity for this hardware."""
 
     hostname = require_non_empty(payload.get("hostname", ""), "hostname")
     device_fingerprint = _normalize_fingerprint(payload.get("device_fingerprint"))
+    mac_address = _optional_text(payload.get("mac_address"))
+    existing_endpoint = find_endpoint_by_identity(device_fingerprint, mac_address)
+    if existing_endpoint is not None:
+        update_endpoint_metadata(existing_endpoint, payload)
+        existing_endpoint.status = STATUS_ONLINE
+        existing_endpoint.last_seen = utc_now()
+        if not existing_endpoint.api_key:
+            existing_endpoint.api_key = generate_api_key()
+        apply_identity_fingerprint(existing_endpoint, device_fingerprint)
+        db.session.commit()
+        return existing_endpoint
+
     endpoint = Endpoint(
         endpoint_id=generate_endpoint_id(),
         hostname=hostname,
@@ -72,8 +90,14 @@ def register_endpoint(payload: dict) -> Endpoint:
         operating_system=_optional_text(payload.get("operating_system")),
         os_version=_optional_text(payload.get("os_version")),
         ip_address=_optional_text(payload.get("ip_address")),
-        mac_address=_optional_text(payload.get("mac_address")),
+        mac_address=mac_address,
         agent_version=_optional_text(payload.get("agent_version")),
+        python_version=_optional_text(payload.get("python_version")),
+        architecture=_optional_text(payload.get("architecture")),
+        processor=_optional_text(payload.get("processor")),
+        cpu_count=_optional_text(payload.get("cpu_count")),
+        total_memory_mb=_optional_text(payload.get("total_memory_mb")),
+        system_drive=_optional_text(payload.get("system_drive")),
         device_fingerprint=device_fingerprint,
         identity_status=IDENTITY_NORMAL if device_fingerprint else IDENTITY_UNKNOWN,
         api_key=generate_api_key(),
@@ -92,6 +116,7 @@ def update_heartbeat(
     endpoint_id: str,
     api_key: str | None = None,
     device_fingerprint: str | None = None,
+    payload: dict | None = None,
 ) -> Endpoint | None:
     """Update endpoint heartbeat and mark it online."""
 
@@ -103,10 +128,58 @@ def update_heartbeat(
         return None
 
     apply_identity_fingerprint(endpoint, device_fingerprint)
+    update_endpoint_metadata(endpoint, payload or {})
     endpoint.status = STATUS_ONLINE
     endpoint.last_seen = utc_now()
     db.session.commit()
     return endpoint
+
+
+def find_endpoint_by_identity(
+    device_fingerprint: str | None,
+    mac_address: str | None,
+) -> Endpoint | None:
+    """Find an existing endpoint by stable hardware identity."""
+
+    if device_fingerprint:
+        endpoint = Endpoint.query.filter_by(
+            device_fingerprint=device_fingerprint
+        ).first()
+        if endpoint is not None:
+            return endpoint
+
+    normalized_mac = _optional_text(mac_address)
+    if normalized_mac:
+        return Endpoint.query.filter(
+            Endpoint.mac_address.ilike(normalized_mac)
+        ).first()
+
+    return None
+
+
+def update_endpoint_metadata(endpoint: Endpoint, payload: dict) -> None:
+    """Refresh inventory fields reported by the agent."""
+
+    field_names = [
+        "hostname",
+        "username",
+        "operating_system",
+        "os_version",
+        "ip_address",
+        "mac_address",
+        "agent_version",
+        "python_version",
+        "architecture",
+        "processor",
+        "cpu_count",
+        "total_memory_mb",
+        "system_drive",
+    ]
+
+    for field_name in field_names:
+        value = _optional_text(payload.get(field_name))
+        if value is not None:
+            setattr(endpoint, field_name, value)
 
 
 def apply_identity_fingerprint(

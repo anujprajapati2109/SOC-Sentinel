@@ -67,9 +67,11 @@ def register_with_retry(
     backoff_seconds = 1
     max_backoff_seconds = 300
 
-    while not config.is_registered:
+    while True:
         try:
             ensure_registered(config, client, logger)
+            if config.is_registered:
+                return
         except (KeyError, requests.RequestException, ValueError) as exc:
             logger.warning(
                 "Registration failed: %s. Retrying in %s seconds.",

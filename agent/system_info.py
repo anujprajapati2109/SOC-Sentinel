@@ -1,4 +1,5 @@
 import getpass
+import os
 import platform
 import socket
 import sys
@@ -6,6 +7,11 @@ import uuid
 
 from config import AGENT_VERSION
 from device_fingerprint import generate_device_fingerprint
+
+try:
+    import psutil
+except ImportError:  # pragma: no cover - optional at runtime.
+    psutil = None
 
 
 def collect_system_info() -> dict[str, str]:
@@ -21,6 +27,11 @@ def collect_system_info() -> dict[str, str]:
         "python_version": platform.python_version(),
         "agent_version": AGENT_VERSION,
         "device_fingerprint": generate_device_fingerprint(),
+        "architecture": platform.machine(),
+        "processor": platform.processor(),
+        "cpu_count": str(os.cpu_count() or ""),
+        "total_memory_mb": get_total_memory_mb(),
+        "system_drive": os.getenv("SystemDrive", ""),
     }
 
 
@@ -47,3 +58,12 @@ def get_python_runtime() -> str:
     """Return a compact Python runtime description."""
 
     return f"{sys.implementation.name} {platform.python_version()}"
+
+
+def get_total_memory_mb() -> str:
+    """Return installed RAM in MB when psutil is available."""
+
+    if psutil is None:
+        return ""
+
+    return str(round(psutil.virtual_memory().total / (1024 * 1024)))

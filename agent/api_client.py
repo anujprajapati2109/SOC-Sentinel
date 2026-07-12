@@ -4,6 +4,7 @@ import requests
 
 from config import AgentConfig
 from device_fingerprint import generate_device_fingerprint
+from system_info import collect_system_info
 from telemetry_event import TelemetryEvent
 
 
@@ -22,11 +23,12 @@ class APIClient:
     def heartbeat(self) -> dict[str, Any]:
         """Send a heartbeat using the stored endpoint credentials."""
 
-        payload = {
+        payload = collect_system_info()
+        payload.update({
             "endpoint_id": self.config.endpoint_id,
             "api_key": self.config.api_key,
             "device_fingerprint": generate_device_fingerprint(),
-        }
+        })
         return self.post("/api/v1/endpoints/heartbeat", payload)
 
     def send_telemetry(self, events: list[TelemetryEvent]) -> dict[str, Any]:

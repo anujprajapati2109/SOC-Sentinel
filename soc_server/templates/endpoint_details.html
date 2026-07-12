@@ -41,6 +41,30 @@
                 <dd>{{ endpoint.agent_version or "Unknown" }}</dd>
             </div>
             <div>
+                <dt>Python Version</dt>
+                <dd>{{ endpoint.python_version or "Unknown" }}</dd>
+            </div>
+            <div>
+                <dt>Architecture</dt>
+                <dd>{{ endpoint.architecture or "Unknown" }}</dd>
+            </div>
+            <div>
+                <dt>Processor</dt>
+                <dd>{{ endpoint.processor or "Unknown" }}</dd>
+            </div>
+            <div>
+                <dt>CPU Cores</dt>
+                <dd>{{ endpoint.cpu_count or "Unknown" }}</dd>
+            </div>
+            <div>
+                <dt>Total RAM</dt>
+                <dd>{{ endpoint.total_memory_mb ~ " MB" if endpoint.total_memory_mb else "Unknown" }}</dd>
+            </div>
+            <div>
+                <dt>System Drive</dt>
+                <dd>{{ endpoint.system_drive or "Unknown" }}</dd>
+            </div>
+            <div>
                 <dt>Device Fingerprint</dt>
                 <dd class="text-break font-monospace">{{ endpoint.device_fingerprint or "Unknown" }}</dd>
             </div>

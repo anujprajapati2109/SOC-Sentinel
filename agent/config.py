@@ -19,7 +19,7 @@ BASE_DIR = get_runtime_dir()
 CONFIG_PATH = BASE_DIR / "config.json"
 AGENT_VERSION = "0.8.0"
 AGENT_DISPLAY_NAME = "SOC Sentinel Agent"
-DEFAULT_SERVER_URL = os.getenv("SOC_SENTINEL_SERVER_URL", "http://127.0.0.1:5000")
+DEFAULT_SERVER_URL = os.getenv("SOC_SENTINEL_SERVER_URL", "http://13.60.233.237")
 
 
 @dataclass
@@ -29,6 +29,8 @@ class AgentConfig:
     server_url: str
     endpoint_id: str
     api_key: str
+    device_fingerprint: str
+    mac_address: str
     heartbeat_interval: int
     run_at_startup: bool
     show_tray_icon: bool
@@ -47,6 +49,8 @@ class AgentConfig:
             "server_url": self.server_url,
             "endpoint_id": self.endpoint_id,
             "api_key": self.api_key,
+            "device_fingerprint": self.device_fingerprint,
+            "mac_address": self.mac_address,
             "heartbeat_interval": self.heartbeat_interval,
             "run_at_startup": self.run_at_startup,
             "show_tray_icon": self.show_tray_icon,
@@ -63,6 +67,8 @@ def load_config() -> AgentConfig:
                 server_url=DEFAULT_SERVER_URL,
                 endpoint_id="",
                 api_key="",
+                device_fingerprint="",
+                mac_address="",
                 heartbeat_interval=30,
                 run_at_startup=True,
                 show_tray_icon=True,
@@ -77,6 +83,8 @@ def load_config() -> AgentConfig:
         server_url=str(data.get("server_url", DEFAULT_SERVER_URL)).rstrip("/"),
         endpoint_id=str(data.get("endpoint_id", "")),
         api_key=str(data.get("api_key", "")),
+        device_fingerprint=str(data.get("device_fingerprint", "")),
+        mac_address=str(data.get("mac_address", "")),
         heartbeat_interval=int(data.get("heartbeat_interval", 30)),
         run_at_startup=bool(data.get("run_at_startup", True)),
         show_tray_icon=bool(data.get("show_tray_icon", True)),
@@ -100,5 +108,11 @@ def save_config(config: AgentConfig) -> None:
 def _is_missing_new_fields(data: dict[str, Any]) -> bool:
     """Return whether an older config file needs v0.3.5 defaults persisted."""
 
-    required_fields = {"run_at_startup", "show_tray_icon", "log_level"}
+    required_fields = {
+        "run_at_startup",
+        "show_tray_icon",
+        "log_level",
+        "device_fingerprint",
+        "mac_address",
+    }
     return not required_fields.issubset(data.keys())

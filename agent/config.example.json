@@ -2,6 +2,8 @@
   "server_url": "",
   "endpoint_id": "",
   "api_key": "",
+  "device_fingerprint": "",
+  "mac_address": "",
   "heartbeat_interval": 30,
   "run_at_startup": true,
   "show_tray_icon": true,

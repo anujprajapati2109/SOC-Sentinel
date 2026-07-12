@@ -42,6 +42,7 @@ def heartbeat():
         endpoint_id,
         api_key,
         payload.get("device_fingerprint"),
+        payload,
     )
     if endpoint is None:
         return jsonify({"error": "Endpoint not found or API key is invalid."}), 404
