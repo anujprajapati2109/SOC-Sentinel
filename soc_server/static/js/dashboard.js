@@ -14,6 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initializeFilterForms();
     initializeConfirmations();
     initializeLiveSectionPolling();
+    initializeCloudStatusToggle();
 
     if (document.querySelector("[data-dashboard-value]")) {
         initializeTimelineControls();
@@ -21,6 +22,26 @@ document.addEventListener("DOMContentLoaded", () => {
         window.setInterval(refreshDashboard, refreshIntervalMs);
     }
 });
+
+function initializeCloudStatusToggle() {
+    const section = document.getElementById("cloudStatusSection");
+    const button = document.getElementById("cloudStatusToggle");
+    const details = document.getElementById("cloud-status-grid");
+
+    if (!section || !button || !details) {
+        return;
+    }
+
+    button.addEventListener("click", () => {
+        const isExpanded = button.getAttribute("aria-expanded") === "true";
+        const nextExpanded = !isExpanded;
+
+        button.setAttribute("aria-expanded", String(nextExpanded));
+        details.hidden = !nextExpanded;
+        section.classList.toggle("is-expanded", nextExpanded);
+        section.classList.toggle("is-collapsed", !nextExpanded);
+    });
+}
 
 async function refreshDashboard() {
     try {

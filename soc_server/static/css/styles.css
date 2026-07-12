@@ -335,6 +335,75 @@ body.theme-light .form-select {
     font-size: 0.88rem;
 }
 
+.cloud-status-section {
+    gap: 0;
+}
+
+.cloud-status-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    width: 100%;
+    padding: 0.9rem 1rem;
+    color: #f8fafc;
+    background: rgba(15, 23, 42, 0.78);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    text-align: left;
+}
+
+.cloud-status-toggle:hover,
+.cloud-status-toggle:focus-visible {
+    background: rgba(30, 41, 59, 0.82);
+    border-color: rgba(34, 211, 238, 0.45);
+}
+
+.cloud-status-toggle:focus-visible {
+    outline: 2px solid rgba(34, 211, 238, 0.8);
+    outline-offset: 2px;
+}
+
+.cloud-status-title,
+.cloud-status-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.cloud-status-title i {
+    color: #22d3ee;
+    font-size: 1.2rem;
+}
+
+.cloud-status-title strong {
+    display: block;
+    font-size: 1.02rem;
+}
+
+.cloud-status-title small {
+    display: block;
+    margin-top: 0.2rem;
+    color: var(--muted);
+    font-size: 0.82rem;
+}
+
+.cloud-status-summary .bi-chevron-down {
+    transition: transform 0.18s ease;
+}
+
+.cloud-status-section.is-expanded .cloud-status-summary .bi-chevron-down {
+    transform: rotate(180deg);
+}
+
+.cloud-status-details {
+    margin-top: 0.75rem;
+}
+
+.cloud-status-details[hidden] {
+    display: none !important;
+}
+
 .refresh-indicator {
     display: inline-flex;
     align-items: center;
@@ -1004,6 +1073,16 @@ body.theme-light .form-select {
     .section-heading {
         align-items: flex-start;
         flex-direction: column;
+    }
+
+    .cloud-status-toggle {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .cloud-status-summary {
+        justify-content: space-between;
+        width: 100%;
     }
 
     .about-hero,

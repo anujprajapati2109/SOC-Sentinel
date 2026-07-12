@@ -4,15 +4,25 @@
 {% block page_title %}SOC Intelligence Center{% endblock %}
 
 {% block content %}
-<section class="command-section mt-4">
-    <div class="section-heading">
-        <div>
-            <h2>Cloud Status</h2>
-            <p>Deployment mode, public endpoint, database backend, and platform health.</p>
-        </div>
-        <span class="badge rounded-pill text-bg-info">v{{ app_version }}</span>
-    </div>
-    <div id="cloud-status-grid" class="health-grid">
+<section class="command-section mt-4 cloud-status-section is-collapsed" id="cloudStatusSection">
+    <button class="cloud-status-toggle"
+            id="cloudStatusToggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="cloud-status-grid">
+        <span class="cloud-status-title">
+            <i class="bi bi-cloud-check"></i>
+            <span>
+                <strong>Cloud Status</strong>
+                <small>Deployment mode, public endpoint, database backend, and platform health.</small>
+            </span>
+        </span>
+        <span class="cloud-status-summary">
+            <span class="badge rounded-pill text-bg-info">v{{ app_version }}</span>
+            <i class="bi bi-chevron-down"></i>
+        </span>
+    </button>
+    <div id="cloud-status-grid" class="health-grid cloud-status-details" hidden>
         <div class="health-item"><span>Application Mode</span><strong>{{ application_mode }}</strong></div>
         <div class="health-item"><span>Public URL</span><strong>Detecting deployment URL</strong></div>
         <div class="health-item"><span>Health Status</span><strong>Waiting</strong></div>
