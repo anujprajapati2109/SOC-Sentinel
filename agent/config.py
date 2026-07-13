@@ -19,7 +19,7 @@ BASE_DIR = get_runtime_dir()
 CONFIG_PATH = BASE_DIR / "config.json"
 AGENT_VERSION = "0.8.0"
 AGENT_DISPLAY_NAME = "SOC Sentinel Agent"
-DEFAULT_SERVER_URL = os.getenv("SOC_SENTINEL_SERVER_URL", "http://13.60.233.237")
+DEFAULT_SERVER_URL = os.getenv("SOC_SENTINEL_SERVER_URL", "http://13.61.52.33")
 
 
 @dataclass
