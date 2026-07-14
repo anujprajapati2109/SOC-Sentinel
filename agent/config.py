@@ -20,6 +20,14 @@ CONFIG_PATH = BASE_DIR / "config.json"
 AGENT_VERSION = "0.8.0"
 AGENT_DISPLAY_NAME = "SOC Sentinel Agent"
 DEFAULT_SERVER_URL = os.getenv("SOC_SENTINEL_SERVER_URL", "http://13.61.52.33")
+RETIRED_SERVER_URLS = {
+    value.strip().rstrip("/").lower()
+    for value in os.getenv(
+        "SOC_SENTINEL_RETIRED_SERVER_URLS",
+        "http://13.60.233.237",
+    ).split(",")
+    if value.strip()
+}
 
 
 @dataclass
@@ -100,11 +108,13 @@ def load_config() -> AgentConfig:
 
 
 def normalize_server_url(server_url: str) -> str:
-    """Return the configured server URL, upgrading stale localhost defaults."""
+    """Return the configured server URL, upgrading stale local or retired URLs."""
 
+    server_url = str(server_url).strip().rstrip("/")
     if not server_url:
         return DEFAULT_SERVER_URL
 
+    normalized_url = server_url.lower()
     localhost_urls = {
         "http://127.0.0.1:5000",
         "http://localhost:5000",
@@ -115,6 +125,9 @@ def normalize_server_url(server_url: str) -> str:
         and DEFAULT_SERVER_URL.lower() not in localhost_urls
         and allow_localhost not in {"1", "true", "yes"}
     ):
+        return DEFAULT_SERVER_URL
+
+    if normalized_url in RETIRED_SERVER_URLS:
         return DEFAULT_SERVER_URL
 
     return server_url
